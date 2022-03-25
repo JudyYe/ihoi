@@ -27,13 +27,31 @@ def latest_ckpt(prop, include_last=False, till=-1):
         return ckpt_list[inds]
 
 
+def get_model_name(cfg,  cli_args, eval, config_file):
+    if eval:
+        name = os.path.basename(cfg.MODEL_SIG)
+    else:
+        # name = '%s' % (cfg.DB.NAME)
+        # name += '_%s' % (cfg.MODEL.NAME)
+        name = '%s' % (osp.basename(config_file).split('.')[0])
+    
+        skip_list = ['EXP', 'GPU',
+                     'TEST.NAME']
+        for full_key, v in zip(cli_args[0::2], cli_args[1::2]):
+            if full_key in skip_list:
+                continue
+            if 'SLURM' in full_key:
+                continue
+            name += '_%s%s' % (full_key, str(v))
+
+    return name
+    
+
 def load_model(cfg, ckpt_dir, ckpt_epoch) -> nn.Module:
-    Model = getattr(importlib.import_module(".train.%s" % cfg.MODEL.CLS, 'ihoi'), cfg.MODEL.NAME)
 
-    assert issubclass(Model, pl.LightningModule)
+    Model = getattr(importlib.import_module(".ihoi", "models"), cfg.MODEL.NAME)
+
     model = Model(cfg)
-    assert isinstance(model, pl.LightningModule)
-
     ckpt = osp.join(ckpt_dir, 'checkpoints', '%s.ckpt' % ckpt_epoch)
     print('load from', ckpt)
     ckpt = torch.load(ckpt)['state_dict']
@@ -60,3 +78,13 @@ def load_my_state_dict(model: torch.nn.Module, state_dict, lambda_own=lambda x: 
             continue
         own_state[own_name].copy_(param)
 
+
+
+def to_cuda(data, device='cuda'):
+    new_data = {}
+    for key in data:
+        if hasattr(data[key], 'cuda'):
+            new_data[key] = data[key].to(device)
+        else:
+            new_data[key] = data[key]
+    return new_data

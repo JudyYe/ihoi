@@ -39,7 +39,7 @@ def recon_predict(args):
     cfg.MODEL.BATCH_SIZE = 1
 
     # get dataloader and dataset 
-    dataset = Custom(args.seq, data_dir=args.data_dir)
+    dataset = Custom(args.data_dir)
     dataloader = DataLoader(dataset, 1)
 
 
@@ -51,8 +51,7 @@ def recon_predict(args):
         cam_f, cam_p = batch['cam_f'], batch['cam_p']
         cTh = batch['cTh']
         with torch.no_grad():
-            nTh = get_nTh(hand_wrapper, batch['hA'][0].cuda(), cfg.DB.RADIUS)[None]
-            hTn = geom_utils.inverse_rt(mat=nTh)
+            hTn = get_nTh(hand_wrapper, batch['hA'].cuda(), cfg.DB.RADIUS, inverse=True)
 
             hObj, hHand = forward_to_mesh(
                 model, 
@@ -60,7 +59,7 @@ def recon_predict(args):
                 batch['cTh'], 
                 batch['hA'], 
                 batch['cam_f'], batch['cam_p'], 
-                hTn,
+                geom_utils.matrix_to_se3(hTn),
                 hand_wrapper=hand_wrapper,
                 obj_mask=batch['obj_mask'],
                 )
@@ -70,19 +69,14 @@ def recon_predict(args):
         cHoi = mesh_utils.apply_transform(hHoi, cTh.to(device))
         cameras = PerspectiveCameras(cam_f, cam_p, device=device)
         iHoi = mesh_utils.render_mesh(cHoi, cameras,)
-        image_utils.save_images(iHoi['image'], osp.join(args.out, args.seq, 'cHoi', '%05d' % i),
+        image_utils.save_images(iHoi['image'], osp.join(args.out, 'cHoi', batch['index'][0]),
             bg=batch['image'], mask=iHoi['mask'])
         
-        image = mesh_utils.render_geom_rot(hHoi, scale_geom=True, time_len=1)[0]
-        image_utils.save_images(image, osp.join(args.out, args.seq, 'hHoi', '%05d' % i))
+        image_list = mesh_utils.render_geom_rot(cHoi, cameras=cameras, view_centric=True)
+        image_utils.save_gif(image_list, osp.join(args.out, 'hHoi', batch['index'][0]))
 
-        mesh_utils.dump_meshes([osp.join(args.out, args.seq, 'meshes', '%05d' % i)], hHoi)
+        mesh_utils.dump_meshes([osp.join(args.out, 'meshes', batch['index'][0])], hHoi)
 
-    # compact
-    image_list = [imageio.imread(e) for e in  sorted(glob(osp.join(args.out, args.seq, 'cHoi/*.png')))]
-    image_utils.write_gif(image_list, osp.join(args.out, args.seq, 'vis', 'front_view'))
-    image_list = [imageio.imread(e) for e in  sorted(glob(osp.join(args.out, args.seq, 'hHoi/*.png')))]
-    image_utils.write_gif(image_list, osp.join(args.out, args.seq, 'vis', 'hand_view'))
 
 
 def forward_to_mesh(model, images, cTh,hA, cam_f, cam_p,hTn, hand_wrapper, obj_mask=None):
@@ -123,20 +117,19 @@ def forward_to_mesh(model, images, cTh,hA, cam_f, cam_p,hTn, hand_wrapper, obj_m
 
     hTx = batch['hTn']
     hObj = mesh_utils.apply_transform(xObj, hTx)
-    return hObj, hHand, sdf
+    return hObj, hHand
 
   
 
 def parse_args():
     arg_parser = argparse.ArgumentParser(description="Demo args")
-    arg_parser.add_argument('--image', default='xxx.png', type=str)
-    arg_parser.add_argument('--data_dr', default='/checkpoint/yufeiy2/vhoi_out/100doh_detectron/by_obj', type=str)
+    arg_parser.add_argument('--data_dir', default='/checkpoint/yufeiy2/hoi_output/test_data', type=str)
     arg_parser.add_argument('--out', default='/checkpoint/yufeiy2/ihoi_out', type=str)
     arg_parser.add_argument(
         "--experiment",
         "-e",
         dest="experiment_directory",
-        default='output/aug/pifu_MODEL.DECPixCoord/large/rhoi_3dDB.INPUT_rgba_MODEL.SDF.th_False_DB.JIT_ART_0.2/'
+        default='/checkpoint/yufeiy2/hoi_output/release_model/obman/'
         # default='../output/aug/pifu_MODEL.DECPixCoord/'
     )
     arg_parser.add_argument("opts",  default=None, nargs=argparse.REMAINDER)

@@ -1,14 +1,11 @@
 import numpy as np
-import importlib
 
 import torch
 import torch.nn as nn
 
 from pytorch3d.renderer.cameras import PerspectiveCameras
-
-from nnutils.hand_utils import ManopthWrapper
-
 from jutils import mesh_utils
+
 
 def get_embedder(multires=10, **kwargs):
     if multires == -1:
@@ -29,43 +26,48 @@ def get_embedder(multires=10, **kwargs):
     return embedder_obj, embedder_obj.out_dim
 
 
-class ThetaEmbedder(nn.Module):
-    def __init__(self, method, out_dim, **kwargs):
-        super().__init__()
-        self.method = method  # linear or pca
-        self.out_dim = out_dim
-        self.hand_wrapper = ManopthWrapper(**kwargs)
+# Positional encoding (section 5.1)
+class Embedder:
+    """from https://github.com/yenchenlin/nerf-pytorch/blob/bdb012ee7a217bfd96be23060a51df7de402591e/run_nerf_helpers.py"""
+    def __init__(self, **kwargs):
+        self.kwargs = kwargs
+        self.create_embedding_fn()
 
-    def forward(self, hA):
-        """
-        :param hA: (N, 45)
-        :return:
-        """
-        if self.method == 'linear':
-            hA = self.linear(hA)
-        elif self.method == 'pca':
-            # project to pca, select the first out_dim. 
-            hA = self.hand_wrapper.pose_to_pca(hA, self.out_dim)
-        elif self.method == 'none':
-            hA = hA
+    def create_embedding_fn(self):
+        embed_fns = []
+        d = self.kwargs['input_dims']
+        band_width = self.kwargs['band_width']
+        out_dim = 0
+        if self.kwargs['include_input']:
+            embed_fns.append(lambda x: x)
+            out_dim += d
+
+        max_freq = self.kwargs['max_freq_log2']
+        N_freqs = self.kwargs['num_freqs']
+
+        if self.kwargs['log_sampling']:
+            freq_bands = band_width * 2. ** torch.linspace(0., max_freq, steps=N_freqs)
         else:
-            raise NotImplementedError
-        return hA
+            freq_bands = torch.linspace(band_width * 2. ** 0., band_width * 2. ** max_freq, steps=N_freqs)
 
+        for freq in freq_bands:
+            for p_fn in self.kwargs['periodic_fns']:
+                embed_fns.append(lambda x, p_fn=p_fn, freq=freq: p_fn(x * freq))
+                out_dim += d
 
-class BaseSdf(nn.Module):
-    def __init__(self, hA_dim):
-        super().__init__()
-        self.th_embedder = ThetaEmbedder('pca', hA_dim)
-    
-    def forward(self, points, z, hA):
-        raise NotImplementedError
+        self.embed_fns = embed_fns
+        self.out_dim = out_dim
 
+    def embed(self, inputs):
+        return torch.cat([fn(inputs) for fn in self.embed_fns], -1)
+
+    def __call__(self, inputs):
+        return self.embed(inputs)
 
 
 class PixCoord(nn.Module):
     def __init__(self, cfg, z_dim, hA_dim, freq):
-        super().__init__(cfg, z_dim, hA_dim, freq)
+        super().__init__()
         J = 16
         self.net = ImplicitNetwork(z_dim + J*3, multires=freq, 
             **cfg.SDF)
@@ -78,16 +80,29 @@ class PixCoord(nn.Module):
         jsPoints = jsPoints.transpose(1, 2).reshape(N, P, num_j * 3) # N, P, J, 3
         return jsPoints  # (N, P, J)
 
+    # TODO: name!!
+    def sample_multi_z(self, xPoints, z, cTx, cam):
+        N1, P, D = xPoints.size()
+        N = z.size(0)
+        xPoints_exp = xPoints.expand(N, P, D)
+
+        ndcPoints = self.proj_x_ndc(xPoints_exp, cTx, cam)
+        zs = mesh_utils.sample_images_at_mc_locs(z, ndcPoints)  # (N, P, D)
+        return zs
+
+    def proj_x_ndc(self, xPoints, cTx, cam:PerspectiveCameras):
+        cPoints = mesh_utils.apply_transform(xPoints, cTx)
+        ndcPoints = mesh_utils.transform_points(cPoints, cam)
+        return ndcPoints[..., :2]
+
     def forward(self, xPoints, z, hA, cTx=None, 
-                cam: PerspectiveCameras=None, jsTx=None, mv=False):
+                cam: PerspectiveCameras=None, jsTx=None):
         N, P, _ = xPoints.size()
 
         glb, local = z
-        local = self.sample_multi_z(xPoints, local, hA, cTx, cam, jsTx, mv)
+        local = self.sample_multi_z(xPoints, local, cTx, cam)
         # (N, P, 3) * (N, J, 12)  --> N, J, P, 3  -> N, P, J
         dstPoints = self.get_dist_joint(xPoints, jsTx)
-        if mv:
-            glb = torch.mean(glb, dim=0, keepdim=True).repeat(len(local), 1)
         latent = self.cat_z_hA((glb, local, dstPoints), hA)
         points = self.net.cat_z_point(xPoints, latent)
         sdf_value = self.net(points)
@@ -273,14 +288,9 @@ class ImplicitNetwork(nn.Module):
         return z_p
 
 
-def build_net(cfg, z_dim=None) -> BaseSdf:
-    # try:
-    Dec = getattr(importlib.import_module(".models.sdf_net", 'ihoi'), cfg.DEC)
+def build_net(cfg, z_dim=None):
     if z_dim is None:
         z_dim = cfg.Z_DIM
-    dec = Dec(cfg, z_dim, cfg.THETA_DIM, cfg.FREQ)
-    # except:
-        # dec = None
-        # raise NotImplementedError("models.sdf_net" + cfg.DEC)
+    dec = PixCoord(cfg, z_dim, cfg.THETA_DIM, cfg.FREQ)
     return dec
 

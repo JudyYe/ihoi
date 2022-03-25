@@ -105,7 +105,4 @@ class ImageSpEnc(pl.LightningModule):
 
 
 def build_net(name, cfg) -> ImageSpEnc:
-    print(name)
-    Model = getattr(importlib.import_module(".models.enc", 'ihoi'), name)
-    dec = Model(cfg,  out_dim=cfg.MODEL.Z_DIM, layer=cfg.MODEL.ENC_RESO, modality=cfg.DB.INPUT)
-    return dec
+    return ImageSpEnc(cfg,  out_dim=cfg.MODEL.Z_DIM, layer=cfg.MODEL.ENC_RESO, modality=cfg.DB.INPUT)
