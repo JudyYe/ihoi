@@ -4,10 +4,7 @@ python -m demo.demo_hoi -e xxx  --image xxx.png [--weight ....ckpt] [--out ]
 save prediction to: out/xxx_v0.png, out/xxx_v1.png, 
 """
 
-# import pickle
 import functools
-from glob import glob
-import imageio
 from tqdm import tqdm
 import argparse
 import os.path as osp
@@ -45,6 +42,8 @@ def recon_predict(args):
 
     # get model
     model = model_utils.load_model(cfg, args.experiment_directory, 'last')
+    print(model.dec)
+    assert False
     hand_wrapper = ManopthWrapper().to(device)
 
     for i, batch in tqdm(enumerate(dataloader), total=len(dataloader)):
@@ -113,6 +112,7 @@ def forward_to_mesh(model, images, cTh,hA, cam_f, cam_p,hTn, hand_wrapper, obj_m
     # normal space, joint space jsTn, image space 
     sdf = functools.partial(model.dec, z=out['z'], hA=batch['hA'], 
         jsTx=out['jsTx'].detach(), cTx=cTx.detach(), cam=camera)
+    # TODO: handel empty predicdtion
     xObj = mesh_utils.batch_sdf_to_meshes(sdf, N, bound=True)
 
     hTx = batch['hTn']
@@ -129,8 +129,7 @@ def parse_args():
         "--experiment",
         "-e",
         dest="experiment_directory",
-        default='/checkpoint/yufeiy2/hoi_output/release_model/obman/'
-        # default='../output/aug/pifu_MODEL.DECPixCoord/'
+        default='/checkpoint/yufeiy2/hoi_output/release_model/mow'
     )
     arg_parser.add_argument("opts",  default=None, nargs=argparse.REMAINDER)
     return arg_parser

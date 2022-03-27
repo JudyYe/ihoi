@@ -13,11 +13,11 @@ def build_dataset(args, name, cls, split, is_train=True, **kwarg):
         from .mow import MOW as dset
     else:
         raise NotImplementedError('not implemented %s' % name)
-    dset = dset(args, name, split, is_train)
+    dset = dset(args, name, split, is_train, data_dir=args.DB.DIR)
 
-    if cls == 'sdf_img':
-        from .sdf_img import SdfImg
-        dset = SdfImg(args, dset, is_train, **kwarg)
+    from .sdf_img import SdfImg
+    dset = SdfImg(args, dset, is_train, **kwarg)
+
     dset.preload_anno()
     print(name, len(dset))
     return dset

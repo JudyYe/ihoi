@@ -17,7 +17,7 @@ from jutils import mesh_utils, geom_utils
 class Obman(BaseData):
     def __init__(self, cfg, dataset: str, split='val', is_train=True,
                  data_dir='../data/obman/obman/', cache=None):
-        super().__init__(cfg, 'obman', split, is_train, data_dir)
+        super().__init__(cfg, 'obman', split, is_train,     data_dir)
         self.cache = cache if cache is not None else self.cfg.DB.CACHE
         self.anno = {
             'index': [],  # per grasp
@@ -35,12 +35,12 @@ class Obman(BaseData):
         self.cache_mesh = osp.join(self.data_dir, 'Cache', '%s_%s_mesh.pkl' % (dataset, self.split))
 
         self.meta_dir = os.path.join(self.data_dir, split, 'meta_plus', '{}.pkl')
-        self.shape_dir = os.path.join('../data', 'shapenet3d', '{}', '{}', 'models', 'model_normalized.obj')
+        self.shape_dir = os.path.join('../hoi/data', 'shapenet3d', '{}', '{}', 'models', 'model_normalized.obj')
         self.image_dir = osp.join(self.data_dir, split, 'rgb', '{}.jpg')
         self.mask_dir = osp.join(self.data_dir, split, 'segms_plus', '{}.png')
 
     def get_sdf_files(self, cad_index):
-        sdf_dir = osp.join('../data/', 'sdf/SdfSamples/', self.dataset, 'all')
+        sdf_dir = osp.join(self.cfg.DB.SDF_DIR, 'SdfSamples/', self.dataset, 'all')
         filename = osp.join(sdf_dir, cad_index + '.npz')
         assert osp.exists(filename), 'Not exists %s' % filename
         return filename

@@ -39,7 +39,7 @@ def default_argument_parser():
 
 def setup_cfg(args) -> DictConfig:
     ckpt_config = None
-    if args.eval or args.ckpt is not None:
+    if args.eval and args.ckpt is None:
         ckpt_config = os.path.join(args.ckpt.split('checkpoints')[0], 'hparams.yaml')
         # args.config_file = os.path.join(args.ckpt.split('checkpoints')[0], 'hparams.yaml')
         args.ckpt = latest_ckpt(args.ckpt, include_last=True)

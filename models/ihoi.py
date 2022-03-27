@@ -1,6 +1,7 @@
 import functools
 from typing import Any, List
 
+import importlib
 import numpy as np
 import os
 import os.path as osp
@@ -16,7 +17,7 @@ from nnutils.logger import MyLogger
 from datasets import build_dataloader
 from models import dec, enc
 from nnutils.hand_utils import ManopthWrapper
-from jutils import geom_utils, mesh_utils, image_utils
+from jutils import geom_utils, mesh_utils, image_utils, slurm_utils
 
 
 def get_hTx(frame, batch):
@@ -263,6 +264,7 @@ class IHoi(pl.LightningModule):
         # normal space, joint space jsTn, image space 
         sdf = functools.partial(self.dec, z=out['z'], hA=batch['hA'], 
             jsTx=out['jsTx'], cTx=cTx, cam=camera)
+            
         xObj = mesh_utils.batch_sdf_to_meshes(sdf, N, bound=True)
         cache['xMesh'] = xObj
         hTx = get_hTx(self.cfg.MODEL.FRAME, batch)
@@ -351,14 +353,10 @@ class IHoi(pl.LightningModule):
         else:
             raise NotImplementedError
 
-        if self.cfg.MODEL.OCC == 'sdf':
-            if minmax or self.current_epoch >= self.cfg.TRAIN.EPOCH // 2:
-                sdf_pred = torch.clamp(sdf_pred, self.minT, self.maxT)
-                sdf_gt = torch.clamp(sdf_gt, self.minT, self.maxT)
-            recon_loss = wgt * F.l1_loss(sdf_pred, sdf_gt)
-        elif self.cfg.MODEL.OCC == 'occ':
-            sdf_gt = (sdf_gt > 0).float()
-            recon_loss = wgt * F.binary_cross_entropy_with_logits(sdf_pred, sdf_gt)
+        if minmax or self.current_epoch >= self.cfg.TRAIN.EPOCH // 2:
+            sdf_pred = torch.clamp(sdf_pred, self.minT, self.maxT)
+            sdf_gt = torch.clamp(sdf_gt, self.minT, self.maxT)
+        recon_loss = wgt * F.l1_loss(sdf_pred, sdf_gt)
         return recon_loss
 
 
@@ -371,12 +369,14 @@ def main(cfg, args):
                       name=os.path.dirname(cfg.MODEL_SIG),
                       version=os.path.basename(cfg.MODEL_SIG),
                       subfolder=cfg.TEST.DIR,
-                      resume=cfg.SLURM.RUN or args.ckpt is not None,
+                      resume=args.slurm or args.ckpt is not None,
                       )
-
-    Model = getattr(importlib.import_module("train.%s" % cfg.MODEL.CLS), cfg.MODEL.NAME)
-    model = Model(cfg)
-    assert isinstance(model, pl.LightningModule)
+    
+    model = IHoi(cfg)
+    print(model.dec)
+    if args.ckpt is not None:
+        print('load from', args.ckpt)
+        model = model.load_from_checkpoint(args.ckpt, cfg=cfg, strict=False)
 
     # instantiate model
     if args.eval:
@@ -387,25 +387,15 @@ def main(cfg, args):
                              )
         print(cfg.MODEL_PATH, trainer.weights_save_path, args.ckpt)
 
-        if args.ckpt is not None:
-            print('load from', args.ckpt)
-            model = model.load_from_checkpoint(args.ckpt, cfg=cfg)
         model.freeze()
-        # trainer.test(test_dataloaders=[val_dataloader, ycb_dataloader], model=model, verbose=False)
         trainer.test(model=model, verbose=False)
     else:
-        if 'AutoDec' in cfg.MODEL.NAME:
-            checkpoint_callback = ModelCheckpoint(
-                save_top_k=-1,
-                save_last=True,
-            )
-        else:
-            checkpoint_callback = ModelCheckpoint(
-                save_top_k=1,
-                monitor='val_loss/dataloader_idx_0',
-                mode='min',
-                save_last=True,
-            )
+        checkpoint_callback = ModelCheckpoint(
+            save_top_k=1,
+            monitor='val_loss/dataloader_idx_0',
+            mode='min',
+            save_last=True,
+        )
         lr_monitor = LearningRateMonitor()
 
         # every_iter = len(model.train_dataloader())
@@ -421,35 +411,38 @@ def main(cfg, args):
                              logger=logger,
                              max_epochs=max_epoch,
                              callbacks=[checkpoint_callback, lr_monitor],
-                             resume_from_checkpoint=args.ckpt,
-                             progress_bar_refresh_rate=0 if cfg.SLURM.RUN else None,            
+                            #  resume_from_checkpoint=args.ckpt,
+                             progress_bar_refresh_rate=0 if args.slurm else None,            
                              )
         trainer.fit(model)
 
 
 if __name__ == '__main__':
     # TODO: remove slurm 
-    args = default_argument_parser().parse_args()
+    arg_parser = default_argument_parser()
+    arg_parser = slurm_utils.add_slurm_args(arg_parser)
+    args = arg_parser.parse_args()
+
     cfg = setup_cfg(args)
-    print(args)
-    if cfg.SLURM.RUN:
-        import submitit
-        save_folder = os.path.join(cfg.OUTPUT_DIR, cfg.MODEL_SIG)
-        if args.eval:
-            save_folder = os.path.join(save_folder, cfg.TEST.DIR)
-        executor = submitit.AutoExecutor(folder=save_folder)
-        SL = cfg.SLURM
-        executor.update_parameters(
-            timeout_min=SL.TIME,
-            slurm_partition=SL.PART,
-            nodes=SL.NODE,
-            gpus_per_node=SL.NGPU,
-            cpus_per_task=SL.NGPU * 10,
-            slurm_job_name=cfg.MODEL_SIG.replace('/', '_'),
-            comment='ICLR Oct06',
-            # slurm_additional_parameters={'comment': 'ICLR Oct06'}
-        )
-        # job = executor.submit(test, cfg, args)
-        job = executor.submit(main, cfg, args)
-    else:
-        main(cfg, args)
+    save_dir = os.path.dirname(cfg.MODEL_PATH)
+    slurm_utils.slurm_wrapper(args, save_dir, main, {'args': args, 'cfg': cfg})
+
+    # if cfg.SLURM.RUN:
+    #     import submitit
+    #     save_folder = os.path.join(cfg.OUTPUT_DIR, cfg.MODEL_SIG)
+    #     if args.eval:
+    #         save_folder = os.path.join(save_folder, cfg.TEST.DIR)
+    #     executor = submitit.AutoExecutor(folder=save_folder)
+    #     SL = cfg.SLURM
+    #     executor.update_parameters(
+    #         timeout_min=SL.TIME,
+    #         slurm_partition=SL.PART,
+    #         nodes=SL.NODE,
+    #         gpus_per_node=SL.NGPU,
+    #         cpus_per_task=SL.NGPU * 10,
+    #         slurm_job_name=cfg.MODEL_SIG.replace('/', '_'),
+    #     )
+    #     # job = executor.submit(test, cfg, args)
+    #     job = executor.submit(main, cfg, args)
+    # else:
+    #     main(cfg, args)

@@ -20,7 +20,6 @@ class HO3D(BaseData):
     def __init__(self, cfg, dataset: str, split='val', is_train=True,
                  data_dir='../data/ho3d/', cache=None):
         super().__init__(cfg, 'ho3d', split, is_train, data_dir)
-        # self.num_points = cfg.DB.NUM_POINTS
         self.cache = cache if cache is not None else self.cfg.DB.CACHE
         self.anno = {
             'index': [],  # per grasp
@@ -48,10 +47,10 @@ class HO3D(BaseData):
         self.meta_dir = os.path.join(self.data_dir, '{}', '{}', meta_folder, '{}.pkl')
         self.image_dir = osp.join(self.data_dir, '{}', '{}', 'rgb', '{}.jpg')
         
-        self.shape_dir = os.path.join('../data', 'ho3dobj/models', '{}', 'textured_simple.obj')
+        self.shape_dir = os.path.join(self.cfg.DB.DIR, '../ho3dobj/models', '{}', 'textured_simple.obj')
 
     def get_sdf_files(self, cad_index):
-        sdf_dir = osp.join('../data/', 'sdf/SdfSamples/', self.dataset, 'all')
+        sdf_dir = osp.join('../hoi/data/', 'sdf/SdfSamples/', self.dataset, 'all')
         filename = osp.join(sdf_dir, cad_index + '.npz')
         assert osp.exists(filename), 'Not exists %s' % filename
         return filename

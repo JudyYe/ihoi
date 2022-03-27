@@ -56,74 +56,70 @@ class MOW(BaseData):
         self.hand_wrapper = ManopthWrapper().to('cpu')
 
     def get_sdf_files(self, cad_index):
-        sdf_dir = osp.join('../data/', 'sdf/SdfSamples/', self.dataset, 'all')
+        sdf_dir = osp.join('../hoi/data/', 'sdf/SdfSamples/', self.dataset, 'all')
         filename = osp.join(sdf_dir, cad_index + '.npz')
         assert osp.exists(filename), 'Not exists %s' % filename
         return filename
 
     def preload_anno(self, load_keys=...):
-        if True:
-            if 'mini' in self.suf:            
-                index_list = [line.strip() for line in open(self.set_dir.format('all'))]
-                index_list = ['gardening_v_qLis0UwnJkc_frame000220'] #, 'study_v_aJobyfOfMj0_frame000254']
-            else:
-                index_list = [line.strip() for line in open(self.set_dir.format(self.split))]
+        if 'mini' in self.suf:            
+            index_list = [line.strip() for line in open(self.set_dir.format('all'))]
+            index_list = ['gardening_v_qLis0UwnJkc_frame000220'] #, 'study_v_aJobyfOfMj0_frame000254']
+        else:
+            index_list = [line.strip() for line in open(self.set_dir.format(self.split))]
 
-            index_list = set(index_list)
-            with open(osp.join(self.data_dir, 'poses.json')) as fp:
-                anno_list = json.load(fp)
+        index_list = set(index_list)
+        with open(osp.join(self.data_dir, 'poses.json')) as fp:
+            anno_list = json.load(fp)
 
-            for i, anno in enumerate(anno_list):
-                if len(self.suf) > 0 and len(self) >= int(self.suf[len('mini'):]):
-                    break
-                index = anno['image_id']
-                if index not in index_list:
-                    continue
-                if self.cfg.DB.INDEX is not None:
-                    if index.split('_frame')[0] != self.cfg.DB.INDEX.split('_frame')[0]:
-                        continue
+        for i, anno in enumerate(anno_list):
+            if len(self.suf) > 0 and len(self) >= int(self.suf[len('mini'):]):
+                break
+            index = anno['image_id']
+            if index not in index_list:
+                continue
 
-                self.anno['index'].append(index)
-                self.anno['cad_index'].append(index)
+            self.anno['index'].append(index)
+            self.anno['cad_index'].append(index)
 
-                mano_pose = torch.tensor(anno['hand_pose']).unsqueeze(0)
-                transl = torch.tensor(anno['trans']).unsqueeze(0)
-                pose, global_orient = mano_pose[:, 3:], mano_pose[:, :3]
-                pose = pose + self.hand_wrapper.hand_mean
+            mano_pose = torch.tensor(anno['hand_pose']).unsqueeze(0)
+            transl = torch.tensor(anno['trans']).unsqueeze(0)
+            pose, global_orient = mano_pose[:, 3:], mano_pose[:, :3]
+            pose = pose + self.hand_wrapper.hand_mean
 
-                wrTh = geom_utils.axis_angle_t_to_matrix(*cvt_axisang_t_i2o(global_orient, transl))
-                wTwr = apply_trans(anno['hand_R'], anno['hand_t'], anno['hand_s'])
-                wTh = wTwr @ wrTh
+            wrTh = geom_utils.axis_angle_t_to_matrix(*cvt_axisang_t_i2o(global_orient, transl))
+            wTwr = apply_trans(anno['hand_R'], anno['hand_t'], anno['hand_s'])
+            wTh = wTwr @ wrTh
 
-                oToo = geom_utils.rt_to_homo(torch.eye(3) * 8)
-                wTo = apply_trans(anno['R'], anno['t'], anno['s'])
-                wTo = wTo @ oToo
-                hTo = geom_utils.inverse_rt(mat=wTh, return_mat=True) @ wTo
+            oToo = geom_utils.rt_to_homo(torch.eye(3) * 8)
+            wTo = apply_trans(anno['R'], anno['t'], anno['s'])
+            wTo = wTo @ oToo
+            hTo = geom_utils.inverse_rt(mat=wTh, return_mat=True) @ wTo
 
-                # todo: inverse
-                image = Image.open(self.image_dir.format(index))
-                W, H = image.size
-                cam_intr = torch.FloatTensor([
-                    [2, 0, 0],
-                    [0, 2, 0],
-                    [0, 0, 1],
-                ])
-                cam_intr = image_utils.ndc_to_screen_intr(cam_intr, H, W)
+            # todo: inverse
+            image = Image.open(self.image_dir.format(index))
+            W, H = image.size
+            cam_intr = torch.FloatTensor([
+                [2, 0, 0],
+                [0, 2, 0],
+                [0, 0, 1],
+            ])
+            cam_intr = image_utils.ndc_to_screen_intr(cam_intr, H, W)
 
-                _, cJoints = self.hand_wrapper(geom_utils.matrix_to_se3(wTh), pose)
-                pad = 0.8
-                bbox2d = image_utils.square_bbox(minmax(proj3d(cJoints, cam_intr))[0], pad)
+            _, cJoints = self.hand_wrapper(geom_utils.matrix_to_se3(wTh), pose)
+            pad = 0.8
+            bbox2d = image_utils.square_bbox(minmax(proj3d(cJoints, cam_intr))[0], pad)
 
-                self.anno['bbox'].append(bbox2d)
-                self.anno['cam'].append(cam_intr)
-                self.anno['cTh'].append(wTh[0])
-                self.anno['hTo'].append(hTo[0])
-                self.anno['hA'].append(pose[0])
-                # self.anno['image'].append(image)
-                
-            os.makedirs(osp.dirname(self.cache_file), exist_ok=True)
-            print('save cache')
-            pickle.dump(self.anno, open(self.cache_file, 'wb'))
+            self.anno['bbox'].append(bbox2d)
+            self.anno['cam'].append(cam_intr)
+            self.anno['cTh'].append(wTh[0])
+            self.anno['hTo'].append(hTo[0])
+            self.anno['hA'].append(pose[0])
+            # self.anno['image'].append(image)
+            
+        os.makedirs(osp.dirname(self.cache_file), exist_ok=True)
+        print('save cache')
+        pickle.dump(self.anno, open(self.cache_file, 'wb'))
 
         self.preload_mesh()
 

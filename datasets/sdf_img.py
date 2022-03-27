@@ -16,6 +16,7 @@ class SdfImg(nn.Module):
     """SDF Wrapper of datasets"""
     def __init__(self, cfg, dataset, is_train, data_dir='../data/', base_idx=0):
         super().__init__()
+        print(cfg)
         self.cfg = cfg
         self.dataset = dataset
         self.train = is_train
@@ -46,6 +47,9 @@ class SdfImg(nn.Module):
         self.obj2mesh = self.dataset.obj2mesh
         self.map = self.dataset.map
 
+    def __len__(self):
+        return len(self.anno['index'])
+
     def __getitem__(self, idx):
         sample = {}
         idx = self.map[idx] if self.map is not None else idx
@@ -56,7 +60,7 @@ class SdfImg(nn.Module):
         oPos_sdf, oNeg_sdf = unpack_sdf_samples(filename, None)
         hTo = torch.FloatTensor(self.anno['hTo'][idx])
         hA = torch.FloatTensor(self.anno['hA'][idx])
-        nTh = get_nTh(self.hand_wrapper, hA, self.cfg.DB.RADIUS)
+        nTh = get_nTh(self.hand_wrapper, hA[None], self.cfg.DB.RADIUS)[0]
 
         nPos_sdf = self.norm_points_sdf(oPos_sdf, nTh @ hTo) 
         nNeg_sdf = self.norm_points_sdf(oNeg_sdf, nTh @ hTo) 
@@ -185,12 +189,13 @@ class SdfImg(nn.Module):
         return f, p
 
     def get_image(self, idx, bbox):
-        image = np.array(self.anno['image'][idx])
+        image = np.array(self.dataset.get_image(self.anno['index'][idx]))
         image = image_utils.crop_resize(image, bbox, return_np=False)
         return self.transform(image) * 2 - 1
         
     def get_obj_mask(self, idx, bbox):
-        obj_mask = np.array(self.anno['obj_mask'][idx])
+        obj_mask = np.array(self.dataset.get_obj_mask(self.anno['index'][idx]))
+        # obj_mask = np.array(self.anno['obj_mask'][idx])
         obj_mask = image_utils.crop_resize(obj_mask, bbox,return_np=False)
         return (self.transform(obj_mask) > 0).float()
 

@@ -256,14 +256,11 @@ def get_nTh(hand_wrapper, hA, r, inverse=False, center=None):
     y = 0.08
     center = center + torch.FloatTensor([0, -y, 0]).unsqueeze(0).to(device)
 
-    print('center', center.shape)
     # (x - center) / r
     mat = torch.eye(4).unsqueeze(0).repeat(N, 1, 1).to(device)
     mat[..., :3, :3] /= r
     mat[..., :3, 3] = -center / r
 
-
     if inverse:
         mat = geom_utils.inverse_rt(mat=mat, return_mat=True)
-    print(mat.shape)
     return mat
