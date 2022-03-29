@@ -1,9 +1,6 @@
-!src/
-output*
 data/
 .vscode/
 *.sublime-workspace
-exts/
 .idea/
 *.DS_Store
 */__pycache__/

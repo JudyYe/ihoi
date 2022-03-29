@@ -40,8 +40,6 @@ def get_model_name(cfg,  cli_args, eval, config_file):
         for full_key, v in zip(cli_args[0::2], cli_args[1::2]):
             if full_key in skip_list:
                 continue
-            if 'SLURM' in full_key:
-                continue
             name += '_%s%s' % (full_key, str(v))
 
     return name

@@ -69,7 +69,6 @@ class PixCoord(nn.Module):
     def __init__(self, cfg, z_dim, hA_dim, freq):
         super().__init__()
         J = 16
-        print(z_dim, J, freq, cfg.SDF)
         self.net = ImplicitNetwork(z_dim + J*3, multires=freq, 
             **cfg.SDF)
 

@@ -30,7 +30,8 @@ def apply_trans(rot, t, s, device='cpu'):
 
 class MOW(BaseData):
     def __init__(self, cfg, dataset: str, split='val', is_train=True,
-                 data_dir='../data/rhoi/', cache=None):
+                 data_dir='../data/', cache=None):
+        data_dir = osp.join(data_dir, 'mow')
         super().__init__(cfg, 'rhoi', split, is_train, data_dir)
         # self.num_points = cfg.DB.NUM_POINTS
         self.cache = cache if cache is not None else self.cfg.DB.CACHE
@@ -54,12 +55,6 @@ class MOW(BaseData):
         self.shape_dir = osp.join(self.data_dir, 'results/{0}/{0}_norm.obj')
 
         self.hand_wrapper = ManopthWrapper().to('cpu')
-
-    def get_sdf_files(self, cad_index):
-        sdf_dir = osp.join('../hoi/data/', 'sdf/SdfSamples/', self.dataset, 'all')
-        filename = osp.join(sdf_dir, cad_index + '.npz')
-        assert osp.exists(filename), 'Not exists %s' % filename
-        return filename
 
     def preload_anno(self, load_keys=...):
         if 'mini' in self.suf:            

@@ -2,7 +2,6 @@ EXP: rep
 DB:
   NAME: ho3d_vid
   TESTNAME: ho3d_vid3fps
-  DIR: ../hoi/data/ho3d
   GT: plus
 SOLVER:
   BASE_LR: 1.0e-5

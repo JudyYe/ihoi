@@ -1,10 +1,10 @@
 import functools
 from typing import Any, List
 
-import importlib
 import numpy as np
 import os
 import os.path as osp
+import submitit
 import torch
 import torch.nn.functional as F
 import torch.optim
@@ -17,13 +17,14 @@ from nnutils.logger import MyLogger
 from datasets import build_dataloader
 from models import dec, enc
 from nnutils.hand_utils import ManopthWrapper
-from jutils import geom_utils, mesh_utils, image_utils, slurm_utils
+from jutils import geom_utils, mesh_utils, slurm_utils
 
 
 def get_hTx(frame, batch):
     hTn = geom_utils.inverse_rt(batch['nTh'])
     hTx = hTn
     return hTx
+
 
 def get_jsTx(hand_wrapper, hA, hTx):
     """
@@ -42,9 +43,6 @@ def get_jsTx(hand_wrapper, hA, hTx):
     jsTx = jsTh @ hTx
     return jsTx
 
-def get_cTx(cTh, hTx):
-    cTx = geom_utils.compose_se3(cTh, hTx)
-    return cTx
 
 
 class IHoi(pl.LightningModule):
@@ -150,8 +148,9 @@ class IHoi(pl.LightningModule):
 
         prefix = '%d_%d' % (dataloader_idx, batch_idx)
         losses, out = self.step(batch, 0)
-
-        self.vis_step(out, batch, prefix)
+        if batch_idx % 10 == 0:
+            # for sanity check
+            self.vis_step(out, batch, prefix)
         f_res = self.quant_step(out, batch)
 
         return f_res
@@ -201,7 +200,7 @@ class IHoi(pl.LightningModule):
                 jsTx=out['jsTx'], cTx=cTx, cam=camera)
         xObj = mesh_utils.batch_sdf_to_meshes(sdf, N)
 
-        th_list = [.2/100, .5/100, 1/100, 2/100, 1/20, 1/10]
+        th_list = [.5/100, 1/100,]
         gt_pc = batch[self.obj_key][..., :3]
 
         hTx = get_hTx(self.cfg.MODEL.FRAME, batch)
@@ -230,24 +229,12 @@ class IHoi(pl.LightningModule):
                     batch[self.sdf_key][:, P//2:, :3], get_hTx(self.cfg.MODEL.FRAME, batch)
             ))
         hHoi = mesh_utils.join_scene([hHand, hSdf])
+        
         cHoi = mesh_utils.apply_transform(hHoi, batch['cTh'])
         cameras = PerspectiveCameras(batch['cam_f'], batch['cam_p'], device=device)
         image_list = mesh_utils.render_geom_rot(cHoi, view_centric=True, cameras=cameras)
         self.logger.save_gif(self.global_step, image_list, '%s_inp' % prefix)
         
-        cHand = mesh_utils.apply_transform(hHand, batch['cTh'])
-        cameras = PerspectiveCameras(batch['cam_f'], batch['cam_p'], device=device)
-        image_list = mesh_utils.render_geom_rot(cHand, view_centric=True, cameras=cameras, out_size=512)
-        self.logger.save_gif(self.global_step, image_list, '%s_inp_cHand' % prefix)
-
-        image_list = mesh_utils.render_mesh(cHand, cameras, out_size=512)['image']
-        self.logger.save_images(self.global_step, image_list, '%s_inp_cHand' % prefix, scale=False)
-
-        # hHand
-
-        image_list = mesh_utils.render_geom_rot(hHand, scale_geom=True, out_size=512)
-        self.logger.save_gif(self.global_step, image_list, '%s_inp_xHand' % prefix)
-
         return {'hHand': hHand}
     
     def vis_output(self, out, batch, prefix, cache={}):
@@ -283,20 +270,6 @@ class IHoi(pl.LightningModule):
             xyz=cJoints[:, 5], out_size=512)
         self.logger.save_gif(self.global_step, image_list, '%s_cHoi' % prefix)
 
-        render = mesh_utils.render_mesh(cHoi, camera, out_size=512)
-        self.logger.save_images(self.global_step, render['image'], '%s_cHoi' % prefix, scale=False)
-
-        N, P, _ = batch[self.sdf_key].size()
-        xPoints = batch[self.sdf_key][:, P//2:, :3]
-        cPoints = mesh_utils.apply_transform(xPoints, cTx)
-        ndcPoints = mesh_utils.transform_points(cPoints, camera)
-        # ndcPoints = camera.transform_points(cPoints)[..., :2]  # (N, P, 2)
-        pix = mesh_utils.sample_images_at_mc_locs(batch['image'], ndcPoints)
-        mask, _ = image_utils.splat_with_wgt(pix.transpose(-1, -2), ndcPoints, 224, 224)
-        self.logger.save_images(self.global_step, mask, '%s_cam_grid_mask' % prefix)
-
-        self.logger.save_images(self.global_step, mask, '%s_cam_grid' % prefix,
-            bg=batch['image'])
         return cache
 
     def vis_step(self, out, batch, prefix):
@@ -360,36 +333,38 @@ class IHoi(pl.LightningModule):
         return recon_loss
 
 
-
-
-
 def main(cfg, args):
     pl.seed_everything(cfg.SEED)
-    logger = MyLogger(save_dir=cfg.OUTPUT_DIR,
-                      name=os.path.dirname(cfg.MODEL_SIG),
-                      version=os.path.basename(cfg.MODEL_SIG),
-                      subfolder=cfg.TEST.DIR,
-                      resume=args.slurm or args.ckpt is not None,
-                      )
     
     model = IHoi(cfg)
-    print(model.dec)
     if args.ckpt is not None:
         print('load from', args.ckpt)
         model = model.load_from_checkpoint(args.ckpt, cfg=cfg, strict=False)
 
     # instantiate model
     if args.eval:
+        logger = MyLogger(save_dir=cfg.OUTPUT_DIR,
+                        name=os.path.dirname(cfg.MODEL_SIG),
+                        version=os.path.basename(cfg.MODEL_SIG),
+                        subfolder=cfg.TEST.DIR,
+                        resume=True,
+                        )
         trainer = pl.Trainer(gpus='0,',
                              default_root_dir=cfg.MODEL_PATH,
                              logger=logger,
-                             resume_from_checkpoint=args.ckpt,
+                            #  resume_from_checkpoint=args.ckpt,
                              )
         print(cfg.MODEL_PATH, trainer.weights_save_path, args.ckpt)
 
         model.freeze()
         trainer.test(model=model, verbose=False)
     else:
+        logger = MyLogger(save_dir=cfg.OUTPUT_DIR,
+                        name=os.path.dirname(cfg.MODEL_SIG),
+                        version=os.path.basename(cfg.MODEL_SIG),
+                        subfolder=cfg.TEST.DIR,
+                        resume=args.slurm or args.ckpt is not None,
+                        )
         checkpoint_callback = ModelCheckpoint(
             save_top_k=1,
             monitor='val_loss/dataloader_idx_0',
@@ -411,38 +386,19 @@ def main(cfg, args):
                              logger=logger,
                              max_epochs=max_epoch,
                              callbacks=[checkpoint_callback, lr_monitor],
-                            #  resume_from_checkpoint=args.ckpt,
                              progress_bar_refresh_rate=0 if args.slurm else None,            
                              )
         trainer.fit(model)
 
 
+
+
+
 if __name__ == '__main__':
-    # TODO: remove slurm 
     arg_parser = default_argument_parser()
     arg_parser = slurm_utils.add_slurm_args(arg_parser)
     args = arg_parser.parse_args()
-
+    
     cfg = setup_cfg(args)
     save_dir = os.path.dirname(cfg.MODEL_PATH)
-    slurm_utils.slurm_wrapper(args, save_dir, main, {'args': args, 'cfg': cfg})
-
-    # if cfg.SLURM.RUN:
-    #     import submitit
-    #     save_folder = os.path.join(cfg.OUTPUT_DIR, cfg.MODEL_SIG)
-    #     if args.eval:
-    #         save_folder = os.path.join(save_folder, cfg.TEST.DIR)
-    #     executor = submitit.AutoExecutor(folder=save_folder)
-    #     SL = cfg.SLURM
-    #     executor.update_parameters(
-    #         timeout_min=SL.TIME,
-    #         slurm_partition=SL.PART,
-    #         nodes=SL.NODE,
-    #         gpus_per_node=SL.NGPU,
-    #         cpus_per_task=SL.NGPU * 10,
-    #         slurm_job_name=cfg.MODEL_SIG.replace('/', '_'),
-    #     )
-    #     # job = executor.submit(test, cfg, args)
-    #     job = executor.submit(main, cfg, args)
-    # else:
-    #     main(cfg, args)
+    slurm_utils.slurm_wrapper(args, save_dir, main, {'args': args, 'cfg': cfg}, resubmit=False)

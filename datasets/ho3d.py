@@ -11,14 +11,15 @@ import numpy as np
 import tqdm
 from PIL import Image
 from nnutils.hand_utils import cvt_axisang_t_i2o
-from datasets.base_data import BaseData
+from datasets.base_data import BaseData, minmax, proj3d
 
 from jutils import mesh_utils, geom_utils, image_utils
 
 
 class HO3D(BaseData):
     def __init__(self, cfg, dataset: str, split='val', is_train=True,
-                 data_dir='../data/ho3d/', cache=None):
+                 data_dir='../data/', cache=None):
+        data_dir = osp.join(data_dir, 'ho3d')
         super().__init__(cfg, 'ho3d', split, is_train, data_dir)
         self.cache = cache if cache is not None else self.cfg.DB.CACHE
         self.anno = {
@@ -48,12 +49,6 @@ class HO3D(BaseData):
         self.image_dir = osp.join(self.data_dir, '{}', '{}', 'rgb', '{}.jpg')
         
         self.shape_dir = os.path.join(self.cfg.DB.DIR, '../ho3dobj/models', '{}', 'textured_simple.obj')
-
-    def get_sdf_files(self, cad_index):
-        sdf_dir = osp.join('../hoi/data/', 'sdf/SdfSamples/', self.dataset, 'all')
-        filename = osp.join(sdf_dir, cad_index + '.npz')
-        assert osp.exists(filename), 'Not exists %s' % filename
-        return filename
 
     def preload_anno(self, load_keys=[]):
         if self.cache and osp.exists(self.cache_file):

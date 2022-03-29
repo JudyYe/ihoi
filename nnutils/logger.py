@@ -32,6 +32,7 @@ class MyLogger(TensorBoardLogger):
             kwargs['version'] = os.path.join(kwargs.get('version'), self.subfolder)
         super(MyLogger, self).__init__(**kwargs)
         if not resume:
+            logging.warn('REMOVE %s' % self.log_dir)
             cmd = 'rm -rf %s' % self.log_dir 
             print(cmd)
             # cmd = 'rm -rf {0}/checkpoints {0}/train {0}/hparams.yaml {0}/event*'.format(self.log_dir)

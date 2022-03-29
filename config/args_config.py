@@ -1,6 +1,7 @@
 import argparse
 from ast import literal_eval
 import copy
+import logging
 import os
 from yacs.config import _assert_with_logging, _check_and_coerce_cfg_value_type
 
@@ -41,7 +42,6 @@ def setup_cfg(args) -> DictConfig:
     ckpt_config = None
     if args.eval and args.ckpt is None:
         ckpt_config = os.path.join(args.ckpt.split('checkpoints')[0], 'hparams.yaml')
-        # args.config_file = os.path.join(args.ckpt.split('checkpoints')[0], 'hparams.yaml')
         args.ckpt = latest_ckpt(args.ckpt, include_last=True)
     cfg = get_cfg_defaults()
     cfg = merge_cfg(cfg, args.config_file, ckpt_config, args.opts)
@@ -55,7 +55,7 @@ def setup_cfg(args) -> DictConfig:
 def set_model_name_path(args, cfg):
     # set model dir
     if args.eval:
-        skip_list = ['EXP', 'GPU', 'TEST.NAME', 'SLURM']
+        skip_list = ['EXP', 'GPU', 'TEST.NAME', ]
         cfg.TEST.DIR = cfg.TEST.NAME
         for full_key, v in zip(args.opts[0::2], args.opts[1::2]):
             flag = False
@@ -66,23 +66,22 @@ def set_model_name_path(args, cfg):
             if flag:
                 continue 
             cfg.TEST.DIR += '_%s%s' % (full_key, str(v))
-            cfg.MODEL_SIG = os.path.join(cfg.EXP, get_model_name(cfg, args.opts, args.eval, args.config_file))
+        # assume ckpt is OUTPUT_DIR/exp/name/checkpoints/latest.ckpt
+        cfg.MODEL_SIG = args.ckpt.split('/')[-4] + '/' + args.ckpt.split('/')[-3]
+        cfg.MODEL_PATH = os.path.join(cfg.OUTPUT_DIR, cfg.MODEL_SIG, 'checkpoints')
     else:
         cfg.MODEL_SIG = os.path.join(cfg.EXP, get_model_name(cfg, args.opts, args.eval, args.config_file))
         cfg.MODEL_PATH = os.path.join(cfg.OUTPUT_DIR, cfg.MODEL_SIG, 'checkpoints')
 
 
 def merge_cfg(cfg, *args):
-    # cfg.register_deprecated_key('SLURM.RUN')
     for each in args:
         if isinstance(each, str):
             with open(each, 'r') as fp:
                 each = CN.load_cfg(fp)
-            # each.register_deprecated_key('SLURM.RUN')
-            _merge_a_into_b(each, cfg, cfg, [], ['SLURM.RUN'])
+            _merge_a_into_b(each, cfg, cfg, [], )
         elif isinstance(each, CN):
-            # each.register_deprecated_key('SLURM.RUN')
-            _merge_a_into_b(each, cfg, cfg, [], ['SLURM.RUN'])
+            _merge_a_into_b(each, cfg, cfg, [], )
         elif isinstance(each, list):
             cfg.merge_from_list(each)
         elif each is None:
@@ -94,7 +93,7 @@ def merge_cfg(cfg, *args):
 
 
 
-def _merge_a_into_b(a, b, root, key_list, skip_list):
+def _merge_a_into_b(a, b, root, key_list=[], skip_list=[]):
     """Merge config dictionary a into config dictionary b, clobbering the
     options in b whenever they are also specified in a.
     """

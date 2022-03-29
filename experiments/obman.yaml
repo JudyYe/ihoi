@@ -2,4 +2,3 @@ EXP: rep
 DB:
   NAME: obman
   TESTNAME: obman
-  DIR: /checkpoint/yufeiy2/datasets/obman/obman

@@ -239,3 +239,50 @@ def remove_nans(tensor):
     tensor_nan = torch.isnan(tensor[:, 3])
     return tensor[~tensor_nan, :]
 
+
+
+
+def vis_db():
+    from pytorch3d.renderer import PerspectiveCameras
+    from config.args_config import default_argument_parser, setup_cfg
+    from nnutils import model_utils, hand_utils
+    args = default_argument_parser().parse_args()
+    cfg = setup_cfg(args)
+
+    from . import build_dataloader
+    from nnutils import image_utils
+    jitter = False
+    data_loader = build_dataloader(cfg, 'test', jitter, shuffle=False, bs=8)
+    device = 'cuda:0'
+    hand_wrapper = hand_utils.ManopthWrapper().to(device)
+
+    for i, data in enumerate(data_loader):
+        data = model_utils.to_cuda(data)
+
+        image_utils.save_images(data['image'], osp.join(save_dir, '%d_gt_%d' % (i, jitter)), scale=True)
+
+        N, P, _ = data['hSdf'].size()
+        cameras = PerspectiveCameras(data['cam_f'], data['cam_p'], device=device)
+        nSdf = data['nSdf'][..., P // 2:, :3] 
+        cTn = geom_utils.compose_se3(data['cTh'], geom_utils.inverse_rt(data['nTh']))
+        nObj = mesh_utils.pc_to_cubic_meshes(nSdf)
+        cObj = mesh_utils.apply_transform(nObj, cTn)
+
+
+        cHand, _ = hand_wrapper(data['cTh'], data['hA'])
+        cHoi = mesh_utils.join_scene([cHand, cObj])
+
+        image_list = mesh_utils.render_geom_rot(cHoi, view_centric=True, cameras=cameras)
+        image_utils.save_gif(image_list, osp.join(save_dir, '%d_cObj' % i))
+        image = mesh_utils.render_mesh(cHoi, cameras)
+        image_utils.save_images(image['image'], osp.join(save_dir, '%d_cObj_%s_%d' % (i, cfg.DB.NAME, jitter)), 
+            bg=data['image'], mask=image['mask'], scale=True)
+
+        if i >= 0 :
+            break
+
+
+if __name__ == '__main__':
+    import os.path as osp
+    save_dir = '/checkpoint/yufeiy2/hoi_output/vis_sdf/'
+    vis_db()

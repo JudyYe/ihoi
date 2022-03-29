@@ -2,7 +2,7 @@ EXP: rep
 DB:
   NAME: mow
   TESTNAME: mow
-  DIR: ../hoi/data/rhoi
+  INPUT: rgba
 SOLVER:
   BASE_LR: 1.0e-5
 LOSS:

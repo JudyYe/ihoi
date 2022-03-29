@@ -49,9 +49,7 @@ _C.DB = CN()
 _C.DB.CLS = 'sdf_img'
 _C.DB.NAME = 'obman'
 _C.DB.TESTNAME = 'obman'
-_C.DB.DIR = '/checkpoint/yufeiy2/datasets/obman/obman'
-_C.DB.SDF_DIR = '/checkpoint/yufeiy2/datasets/mesh_sdf'
-
+_C.DB.DIR = '/private/home/yufeiy2/hoi/data/'  # change to your path
 _C.DB.RADIUS = 0.2
 _C.DB.CACHE = True
 _C.DB.IMAGE = False

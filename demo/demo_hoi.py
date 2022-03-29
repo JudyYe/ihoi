@@ -42,8 +42,6 @@ def recon_predict(args):
 
     # get model
     model = model_utils.load_model(cfg, args.experiment_directory, 'last')
-    print(model.dec)
-    assert False
     hand_wrapper = ManopthWrapper().to(device)
 
     for i, batch in tqdm(enumerate(dataloader), total=len(dataloader)):
