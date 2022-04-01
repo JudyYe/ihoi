@@ -11,3 +11,5 @@ __pycache__/
 *.xml
 *.fuse*
 CC/data
+output/
+externals/

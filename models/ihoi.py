@@ -4,7 +4,6 @@ from typing import Any, List
 import numpy as np
 import os
 import os.path as osp
-import submitit
 import torch
 import torch.nn.functional as F
 import torch.optim

@@ -35,10 +35,10 @@ class Obman(BaseData):
         self.cache_file = osp.join(self.data_dir, 'Cache', '%s_%s.pkl' % (dataset, self.split))
         self.cache_mesh = osp.join(self.data_dir, 'Cache', '%s_%s_mesh.pkl' % (dataset, self.split))
 
-        self.meta_dir = os.path.join(self.data_dir, split, 'meta_plus', '{}.pkl')
-        self.shape_dir = os.path.join(self.cfg.DB.DIR, 'shapenet3d', '{}', '{}', 'models', 'model_normalized.obj')
+        self.shape_dir = os.path.join(self.cfg.DB.DIR, 'obmanboj', '{}', '{}', 'models', 'model_normalized.obj')
         self.image_dir = osp.join(self.data_dir, split, 'rgb', '{}.jpg')
         self.mask_dir = osp.join(self.data_dir, split, 'segms_plus', '{}.png')
+        self.meta_dir = os.path.join(self.data_dir, split, 'meta_plus', '{}.pkl')
     
     def preload_anno(self, load_keys=[]):
         for key in load_keys:
@@ -66,7 +66,6 @@ class Obman(BaseData):
                 hTc = geom_utils.inverse_rt(mat=cTh, return_mat=True)
                 hTo = torch.matmul(hTc, cTo)
 
-                # self.anno['cTo'].append(cTo)  # 4x4
                 self.anno['cTh'].append(cTh[0])
                 self.anno['hTo'].append(hTo[0])
                 self.anno['hA'].append(meta_info['hA'])
@@ -111,17 +110,28 @@ class Obman(BaseData):
         
     def get_obj_mask(self, index):
         """R channel"""
-        mask = np.array(Image.open(self.mask_dir.format(index)))[..., 0]
-        # mask = Image.fromarray(np.stack([mask, mask, mask], -1))
-        mask = (mask > 0) * 255
-        mask = Image.fromarray(mask.astype(np.uint8))
+        mask_file = self.mask_dir.format(index)
+        if osp.exists(mask_file):
+            mask = np.array(Image.open(mask_file))[..., 0]
+            mask = (mask > 0) * 255
+            mask = Image.fromarray(mask.astype(np.uint8))
+        else:
+            mask = np.ones_like(np.array(self.get_image(index))[..., 0])
+            mask = (mask > 0) * 255
+            mask = Image.fromarray(mask.astype(np.uint8))
         return mask
 
     def get_hand_mask(self, index):
         """B channel or from hA?"""
-        mask = np.array(Image.open(self.mask_dir.format(index)))[..., 2] 
-        # mask = Image.fromarray(np.stack([mask, mask, mask], -1))
-        mask = Image.fromarray(mask)
+        mask_file = self.mask_dir.format(index)
+        if osp.exists(mask_file):
+            mask = np.array(Image.open(mask_file))[..., 0]
+            mask = (mask > 0) * 255
+            mask = Image.fromarray(mask.astype(np.uint8))
+        else:
+            mask = np.ones_like(np.array(self.get_image(index))[..., 2])
+            mask = (mask > 0) * 255
+            mask = Image.fromarray(mask.astype(np.uint8))
         return mask
     
     def __getitem__(self, idx):

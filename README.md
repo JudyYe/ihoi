@@ -36,6 +36,9 @@ data/
     mow/
 ```
 
+
+provide cache
+provide ho3d/train_vid.csv
 ### Start Training
 
 ==1.2
