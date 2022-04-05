@@ -48,7 +48,7 @@ class HO3D(BaseData):
         self.meta_dir = os.path.join(self.data_dir, '{}', '{}', meta_folder, '{}.pkl')
         self.image_dir = osp.join(self.data_dir, '{}', '{}', 'rgb', '{}.jpg')
         
-        self.shape_dir = os.path.join(self.cfg.DB.DIR, '../ho3dobj/models', '{}', 'textured_simple.obj')
+        self.shape_dir = os.path.join(self.cfg.DB.DIR, 'ho3dobj/models', '{}', 'textured_simple.obj')
 
     def preload_anno(self, load_keys=[]):
         if self.cache and osp.exists(self.cache_file):
@@ -60,6 +60,9 @@ class HO3D(BaseData):
             # filter 1e-3
             df = pd.read_csv(osp.join(self.data_dir, '%s%s.csv' % (self.split, self.suf)))
             sub_df = df[df['dist'] < 5]
+            sub_df = sub_df[sub_df['vid'] == 'MDF11']
+            # sub_df = sub_df[sub_df['frame'] >= 350]
+            
             print(len(df), '-->', len(sub_df))
             index_list = sub_df['index']
             folder_list = sub_df['split']
@@ -109,10 +112,9 @@ class HO3D(BaseData):
                 self.anno['hTo'].append(hTo[0])
                 self.anno['hA'].append(hA[0])
                 
-            os.makedirs(osp.dirname(self.cache_file), exist_ok=True)
-            print('save cache')
-            print(len(self.anno['bbox']))
-            pickle.dump(self.anno, open(self.cache_file, 'wb'))
+            # os.makedirs(osp.dirname(self.cache_file), exist_ok=True)
+            # print('save cache')
+            # pickle.dump(self.anno, open(self.cache_file, 'wb'))
 
         self.preload_mesh()
 
