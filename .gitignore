@@ -5,8 +5,6 @@ data/
 *.DS_Store
 */__pycache__/
 __pycache__/
-*.png
-*.jpg
 *.pth
 *.xml
 *.fuse*
