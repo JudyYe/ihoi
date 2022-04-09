@@ -11,7 +11,7 @@ _C.EXP = 'tmp'
 _C.DUM = ''
 _C.MODEL_SIG = ''
 _C.MODEL_PATH = ''
-_C.OUTPUT_DIR = '/checkpoint/yufeiy2/hoi_output/reproduce/'
+_C.OUTPUT_DIR = '/glusterfs/yufeiy2/fair/tmp'
 
 _C.SEED = 123
 
@@ -49,7 +49,7 @@ _C.DB = CN()
 _C.DB.CLS = 'sdf_img'
 _C.DB.NAME = 'obman'
 _C.DB.TESTNAME = 'obman'
-_C.DB.DIR = '/private/home/yufeiy2/hoi/data/'  # change to your path
+_C.DB.DIR = '/glusterfs/yufeiy2/fair/data/'  # change to your path
 _C.DB.RADIUS = 0.2
 _C.DB.CACHE = True
 _C.DB.IMAGE = False

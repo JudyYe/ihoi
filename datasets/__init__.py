@@ -1,6 +1,6 @@
 from torch.utils.data import ConcatDataset
 from torch.utils.data import DataLoader
-from jutils.mesh_utils import collate_meshes
+from nnutils.mesh_utils import collate_meshes
 
 
 def build_dataset(args, name, cls, split, is_train=True, **kwarg):

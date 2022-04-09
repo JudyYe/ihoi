@@ -24,7 +24,7 @@ import numpy as np
 # from datasets.ho3d import crop_cam, proj3d, get_K, minmax, square_bbox
 
 from nnutils.hand_utils import ManopthWrapper, cvt_axisang_t_i2o,  cvt_axisang_t_o2i
-from jutils import mesh_utils, image_utils, geom_utils
+from nnutils import mesh_utils, image_utils, geom_utils
 
 
 data_dir = '/checkpoint/yufeiy2/datasets/HO3D/'

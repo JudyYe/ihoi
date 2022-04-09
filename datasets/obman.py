@@ -11,7 +11,7 @@ import torch
 import numpy as np
 import tqdm
 from PIL import Image
-from jutils import mesh_utils, geom_utils
+from nnutils import mesh_utils, geom_utils
 
 
 class Obman(BaseData):

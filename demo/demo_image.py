@@ -34,13 +34,13 @@ def get_args():
     parser.add_argument(
         "--filename", default="demo/test.jpg", help="Path to image."
     )
-    parser.add_argument("--out", default="/checkpoint/yufeiy2/hoi_output/reproduce/demo/", help="Dir to save output.")
+    parser.add_argument("--out", default="/glusterfs/yufeiy2/fair/tmp", help="Dir to save output.")
 
     parser.add_argument(
         "--experiment",
         "-e",
         dest="experiment_directory",
-        default='/checkpoint/yufeiy2/hoi_output/release_model/mow'
+        default='/glusterfs/yufeiy2/fair/ihoi_model/release_model/mow'
     )
     parser.add_argument("opts",  default=None, nargs=argparse.REMAINDER)
 

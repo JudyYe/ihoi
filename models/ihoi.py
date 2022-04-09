@@ -16,7 +16,7 @@ from nnutils.logger import MyLogger
 from datasets import build_dataloader
 from models import dec, enc
 from nnutils.hand_utils import ManopthWrapper
-from jutils import geom_utils, mesh_utils, slurm_utils
+from nnutils import geom_utils, mesh_utils, slurm_utils
 
 
 def get_hTx(frame, batch):

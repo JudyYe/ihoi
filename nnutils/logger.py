@@ -9,7 +9,7 @@ from pytorch_lightning import _logger as log
 from pytorch_lightning.utilities import rank_zero_only
 from pytorch_lightning.loggers import TensorBoardLogger
 
-from jutils import image_utils
+from nnutils import image_utils
 
 logFormatter = logging.Formatter("%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s")
 

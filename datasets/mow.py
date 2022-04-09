@@ -15,7 +15,7 @@ from pytorch3d.transforms.transform3d import Rotate, Scale, Translate
 from nnutils.hand_utils import ManopthWrapper, cvt_axisang_t_i2o
 from datasets.base_data import BaseData, minmax, proj3d
 
-from jutils import mesh_utils, geom_utils, image_utils
+from nnutils import mesh_utils, geom_utils, image_utils
 
 
 def apply_trans(rot, t, s, device='cpu'):

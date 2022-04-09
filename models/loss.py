@@ -2,7 +2,7 @@
 # Written by Yufei Ye (https://github.com/JudyYe)
 # --------------------------------------------------------
 import torch
-from jutils import mesh_utils
+from nnutils import mesh_utils
 
 def repulsive_loss(xVerts, sdf):
     sdf_value = sdf(xVerts)

@@ -13,9 +13,9 @@ from PIL import Image
 import torch
 from torch.utils.data import Dataset
 from torchvision.transforms import transforms
-from jutils import geom_utils, image_utils
+from nnutils import geom_utils, image_utils
 from nnutils.hand_utils import ManopthWrapper
-from jutils.image_utils import crop_weak_cam
+from nnutils.image_utils import crop_weak_cam
 
 
 

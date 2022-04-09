@@ -7,7 +7,7 @@ import torch
 from config.defaults import get_cfg_defaults
 from nnutils import model_utils
 
-from jutils import mesh_utils, image_utils, geom_utils
+from nnutils import mesh_utils, image_utils, geom_utils
 from nnutils.hand_utils import ManopthWrapper, get_nTh
 
 

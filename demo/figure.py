@@ -22,7 +22,7 @@ from pytorch3d.renderer import PerspectiveCameras
 from datasets import build_dataloader
 from nnutils.hand_utils import ManopthWrapper
 from nnutils.hoiapi import get_hoi_predictor
-from jutils import mesh_utils, image_utils
+from nnutils import mesh_utils, image_utils
 
 def get_args():
     parser = argparse.ArgumentParser(description="Optimize object meshes w.r.t. human.")

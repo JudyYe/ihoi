@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 
 from pytorch3d.renderer.cameras import PerspectiveCameras
-from jutils import mesh_utils
+from nnutils import mesh_utils
 
 
 def get_embedder(multires=10, **kwargs):

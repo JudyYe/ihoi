@@ -13,7 +13,7 @@ from PIL import Image
 from nnutils.hand_utils import cvt_axisang_t_i2o
 from datasets.base_data import BaseData, minmax, proj3d
 
-from jutils import mesh_utils, geom_utils, image_utils
+from nnutils import mesh_utils, geom_utils, image_utils
 
 
 class HO3D(BaseData):

@@ -14,12 +14,12 @@ from pytorch3d.transforms import Transform3d, Rotate, Translate
 from manopth.manolayer import ManoLayer
 from manopth.tensutils import th_with_zeros, th_posemap_axisang
 
-from jutils import geom_utils
+from nnutils import geom_utils
 
 
 class ManopthWrapper(nn.Module):
     # TODO: mano
-    def __init__(self, mano_path='/checkpoint/yufeiy2/pretrain_model/smplx/mano/', **kwargs):
+    def __init__(self, mano_path='externals/mano/', **kwargs):
         super().__init__()
         self.mano_layer_right = ManoLayer(
             mano_root=mano_path, side='right', use_pca=kwargs.get('use_pca', False), ncomps=kwargs.get('ncomps', 45),
@@ -32,13 +32,14 @@ class ManopthWrapper(nn.Module):
         self.register_buffer('th_selected_comps', torch.FloatTensor(self.mano_layer_right.smpl_data['hands_components']))
         self.register_buffer('inv_scale', 1. / torch.sum(self.th_selected_comps ** 2, dim=-1))  # (D, ))
 
-        with open(osp.join(mano_path, 'contact_zones.pkl'), 'rb') as fp:
-            contact = pickle.load(fp)['contact_zones']
-            contact_list = []
-            for ind, verts_idx in contact.items():
-                contact_list.extend(verts_idx)
-                self.register_buffer('contact_index_%d' % ind, torch.LongTensor(verts_idx))
-        self.register_buffer('contact_index' , torch.LongTensor(contact_list))
+        if osp.exists(osp.join(mano_path, 'contact_zones.pkl')):
+            with open(osp.join(mano_path, 'contact_zones.pkl'), 'rb') as fp:
+                contact = pickle.load(fp)['contact_zones']
+                contact_list = []
+                for ind, verts_idx in contact.items():
+                    contact_list.extend(verts_idx)
+                    self.register_buffer('contact_index_%d' % ind, torch.LongTensor(verts_idx))
+            self.register_buffer('contact_index' , torch.LongTensor(contact_list))
 
 
     def forward(self, glb_se3, art_pose, axisang=None, trans=None, return_mesh=True, mode='outer', **kwargs) -> Tuple[Meshes, torch.Tensor]:

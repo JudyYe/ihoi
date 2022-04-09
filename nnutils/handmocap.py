@@ -16,7 +16,7 @@ from handmocap.hand_mocap_api import HandMocap
 from handmocap.hand_bbox_detector import HandBboxDetector
 
 from torchvision.transforms import ToTensor
-from jutils import image_utils, geom_utils
+from nnutils import image_utils, geom_utils
 
 from nnutils.hand_utils import ManopthWrapper
 

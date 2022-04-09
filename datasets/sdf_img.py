@@ -9,7 +9,7 @@ from torchvision.transforms import transforms
 import pytorch3d.ops as op_3d
 
 from nnutils.hand_utils import ManopthWrapper, get_nTh
-from jutils import mesh_utils, geom_utils, image_utils
+from nnutils import mesh_utils, geom_utils, image_utils
 
 
 class SdfImg(nn.Module):

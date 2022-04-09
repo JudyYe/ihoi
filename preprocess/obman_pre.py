@@ -18,7 +18,7 @@ from pytorch3d.renderer import PerspectiveCameras, TexturesVertex
 from pytorch3d.transforms import Transform3d, Rotate, Translate
 from pytorch3d.structures import Meshes
 from nnutils.hand_utils import ManopthWrapper
-from jutils import image_utils, mesh_utils, geom_utils
+from nnutils import image_utils, mesh_utils, geom_utils
 
 
 def patch_segs():

@@ -18,7 +18,7 @@ from config.defaults import get_cfg_defaults
 from datasets.custom import Custom
 from nnutils.hand_utils import ManopthWrapper, get_nTh
 from nnutils import model_utils
-from jutils import geom_utils, mesh_utils, image_utils
+from nnutils import geom_utils, mesh_utils, image_utils
 
 
 
