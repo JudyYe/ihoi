@@ -1,44 +1,66 @@
 # What's in your hands? 3D Reconstruction of Generic Objects in Hands
-This is a reimplementation of work.
+Yufei Ye, Abhinav Gupta, Shubham Tulsiani
+in CVPR 2022
 
+[[Project Page]](https://judyye.github.io/ihoi) [[Colab Demo]](https://colab.research.google.com/drive/1FdaBn4HQpf9p192CnEl25BQCxAzVfnzT#scrollTo=9qvQ375HnMlH) [[Arxiv]]() 
 
-## Demo
+# teaser
 
 
 ## Installation 
+See [`install.md`](docs/install.md)
+
+## Quick Start 
+```
+python -m demo.demo_image --filename demo/test.jpg --out output/ -e weights/
+```
+
 
 ## Evaluation 
+```
+python -m models.ihoi   --eval --ckpt PATH_TO_YOUR_CKPT/checkpoints/last.ckpt  
 
-You can download our pretrained model here: 
+python -m models.ihoi   --eval --ckpt PATH_TO_YOUR_CKPT/checkpoints/last.ckpt  [--config experiments/[ho3d,mow].yaml  --slurm]
 
-ObMan | HO3D | MOW
----|---|---
-[link]() | [link]() | [link]()
+```
 
 ## Train your own model
-### Preprocess 
 
+### Preprocess data
+[`preprocess.md`](docs/preprocess.md)
+
+### Start training
 ```
-data/
-    sdf/
-        SdfSamples/
-            obman/all/
-                04074963/4e73215ae0f33d23a5e3ac6ff4952f3.npz
-            ho3d/all/
-                033_spatula.npz
-            mow/all/
-                gardening_v_d79ApGisN_Y_frame000046.npzw
-    obman/
-    obmanobj/
-        04530566/72f4c3c433492d585001cb19c4a0eee4/models/model_normalized.obj
-    ho3d/
-    ho3dobj/models/
-    mow/
+# obman
+python -m models.ihoi --config experiments/obman.yaml  --slurm 
+
+# finetune
+python -m models.ihoi --config experiments/mow.yaml  --ckpt PATH_TO_OBMAN_MODEL/obman/checkpoints/last.ckpt --slurm
+
+python -m models.ihoi --config experiments/ho3d.yaml  --ckpt PATH_TO_OBMAN_MODEL/obman/checkpoints/last.ckpt --slurm
 ```
 
+## Citation
+If you use find this code helpful, please consider citing:
 
-provide cache
-provide ho3d/train_vid.csv
-### Start Training
+```
 
-==1.2
+@article{ye2022hand,
+    author = {Ye, Yufei
+                and Gupta, Abhinav
+                and Tulsiani, Shubham},
+    title = {What's in your hands?3D Reconstruction of Generic Objects in Hands},
+    booktitle = {CVPR},
+    year={2022}
+}
+```
+
+## TODO
+- Demo:
+    + [ ] support left hand
+- preprocess:
+    + [ ] provide cached data
+    + [ ] how to create cached data
+- eval:
+    + [ ] test time refinement
+    + [ ] predicted hand eval

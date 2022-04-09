@@ -36,7 +36,7 @@
 - Install other third-party libraries+ download pretrained models and sample data, including: [FrankMocap](https://github.com/facebookresearch/frankmocap/), [MANO](https://github.com/hassony2/manopth)
   - Run the following script
   ```
-  sh scripts/install_third_party.sh
+  sh scripts/one_click.sh
   ```
   - If it doesn't work, follow the instruction of [FrankMocap](https://github.com/facebookresearch/frankmocap/blob/main/docs/INSTALL.md)
 
@@ -64,7 +64,7 @@
             └── MANO_LEFT.pkl    
             └── MANO_RIGHT.pkl
             └── (contact_zones.pkl)
-
+        ```
 
 ### Acknowledgement
 Structure of this installation doc is modified from [FrankMocap](https://github.com/facebookresearch/frankmocap/blob/main/docs/INSTALL.md).

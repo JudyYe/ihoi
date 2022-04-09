@@ -9,3 +9,4 @@ bash scripts/install_frankmocap.sh
 
 # install manopth
 pip install "git+https://github.com/hassony2/manopth.git"
+

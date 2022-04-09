@@ -34,7 +34,7 @@ def get_args():
     parser.add_argument(
         "--filename", default="demo/test.jpg", help="Path to image."
     )
-    parser.add_argument("--out", default="/glusterfs/yufeiy2/fair/tmp", help="Dir to save output.")
+    parser.add_argument("--out", default="output", help="Dir to save output.")
 
     parser.add_argument(
         "--experiment",
