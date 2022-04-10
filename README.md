@@ -4,8 +4,12 @@ in CVPR 2022
 
 [[Project Page]](https://judyye.github.io/ihoi) [[Colab Demo]](https://colab.research.google.com/drive/1FdaBn4HQpf9p192CnEl25BQCxAzVfnzT#scrollTo=9qvQ375HnMlH) [[Arxiv]]() 
 
-# teaser
 
+
+<img src=https://judyye.github.io/ihoi/ho3d/train_MDF10_0151.png width=200/> <img src=https://judyye.github.io/ihoi/rhoi/study_v_LDQPZ8ZeEec_frame000431.png width="200"/><img src="https://judyye.github.io/ihoi/rhoi/study_v_9LvWHppZVPU_frame000247.png" width="200"/>  
+
+<img src="https://judyye.github.io/ihoi/teaser/drill.gif" width="200"/> <img src="https://judyye.github.io/ihoi/teaser/mouse.gif" width="200"/> <img src="https://judyye.github.io/ihoi/teaser/pen.gif" width="200"/> 
+ 
 
 ## Installation 
 See [`install.md`](docs/install.md)
