@@ -50,7 +50,7 @@ def main(args):
     
     # precit hand
     original_dir = os.getcwd()
-    os.chdir(original_dir + 'externals/frankmocap/')
+    os.chdir(original_dir + '/externals/frankmocap/')
     print(os.getcwd())
     bbox_detector = get_handmocap_detector(args.view)
     # Process Human Estimations.
