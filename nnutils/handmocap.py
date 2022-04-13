@@ -74,11 +74,8 @@ def process_mocap_predictions(mocap_predictions, image, hand_wrapper=None, mask=
 
 
 def get_handmocap_detector(view_type='ego_centric'):
-    original_dir = os.getcwd()
-    os.chdir(original_dir + '/externals/frankmocap/')
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     bbox_detector =  HandBboxDetector(view_type, device)
-    os.chdir(original_dir)
     return bbox_detector
 
 
