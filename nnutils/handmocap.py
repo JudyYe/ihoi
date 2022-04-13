@@ -32,7 +32,7 @@ def get_handmocap_predictor(
 
 
 
-def process_mocap_predictions(mocap_predictions, image, hand_wrapper=None):
+def process_mocap_predictions(mocap_predictions, image, hand_wrapper=None, mask=None):
     if hand_wrapper is None:
         hand_wrapper = ManopthWrapper().to('cpu')
     one_hand = mocap_predictions[0]['right_hand']
@@ -54,7 +54,13 @@ def process_mocap_predictions(mocap_predictions, image, hand_wrapper=None):
     crop = image_utils.crop_resize(image, hoi_bbox, return_np=False)
     crop = ToTensor()(crop)[None] * 2 - 1
 
-    mask = torch.ones([1, 1, crop.shape[-2], crop.shape[-1]])
+    if mask is None:
+        mask = torch.ones([1, 1, crop.shape[-2], crop.shape[-1]])
+    else:
+        mask = image_utils.crop_resize(mask, hoi_bbox, return_np=False)
+        mask = ToTensor()(mask)[None]
+        print(mask.shape)
+
 
     data = {
         'cTh': geom_utils.matrix_to_se3(cTh),

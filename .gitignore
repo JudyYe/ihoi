@@ -1,3 +1,5 @@
+weights/
+.ipynb_checkpoints/
 data/
 .vscode/
 *.sublime-workspace
