@@ -76,3 +76,5 @@ If you use find this code helpful, please consider citing:
 - eval:
     + [ ] test time refinement
     + [ ] predicted hand eval
+    + [ ] add more demo images
+    + [ ] models

@@ -1,15 +1,3 @@
-"""
-Usage:
-python -m demo.demo_hoi -e xxx  --image xxx.png [--weight ....ckpt] [--out ]
-
-Usage:
-    # Run on image for bicycle class.
-    python demo.py --filename my_image.jpg --class_name bicycle
-    # Run on image without coarse interaction loss.
-    python demo.py --filename my_image.jpg --class_name bicycle --lw_inter 0
-    # Run on image with higher weight on depth ordering loss.
-    python demo.py --filename my_image.jpg --class_name bicycle --lw_depth 1.
-"""
 import argparse
 import logging
 import os.path as osp
@@ -27,6 +15,10 @@ from renderer.screen_free_visualizer import Visualizer
 
 from nnutils.handmocap import get_handmocap_predictor, process_mocap_predictions, get_handmocap_detector
 from nnutils.hoiapi import get_hoi_predictor, vis_hand_object
+from nnutils import box2mask
+from detectron2.utils.visualizer import ColorMode
+from detectron2.utils.visualizer import Visualizer as VisDet
+from detectron2.structures.boxes import BoxMode
 
 
 def get_args():
@@ -35,12 +27,13 @@ def get_args():
         "--filename", default="demo/test.jpg", help="Path to image."
     )
     parser.add_argument("--out", default="output", help="Dir to save output.")
+    parser.add_argument("--view", default="ego_centric", help="Dir to save output.")
 
     parser.add_argument(
         "--experiment",
         "-e",
         dest="experiment_directory",
-        default='/glusterfs/yufeiy2/fair/ihoi_model/release_model/mow'
+        default='weights/mow'
     )
     parser.add_argument("opts",  default=None, nargs=argparse.REMAINDER)
 
@@ -55,11 +48,10 @@ def main(args):
     image = np.array(image)
     print(image.shape)
     
-    bbox_detector = get_handmocap_detector()
+    bbox_detector = get_handmocap_detector(args.view)
     # Process Human Estimations.
-    detect_output = bbox_detector.detect_hand_bbox(image[::-1].copy())
+    detect_output = bbox_detector.detect_hand_bbox(image[..., ::-1].copy())
     body_pose_list, body_bbox_list, hand_bbox_list, raw_hand_bboxes = detect_output
-    
     res_img = visualizer.visualize(image, hand_bbox_list = hand_bbox_list)
     demo_utils.save_image(res_img, osp.join(args.out, 'hand_bbox.jpg'))
     
@@ -68,15 +60,23 @@ def main(args):
         image[..., ::-1], hand_bbox_list
     )
 
+    # MOW model also takes in masks but currently we feed in all 1. You could specify masks yourself, 
+    # or if you have bounding box for object masks, we can convert it to masks 
+    
+    # mask_predictor = box2mask.setup_model()
+    # boxes = # object_bbox
+    # boxes = BoxMode.convert(boxes, BoxMode.XYWH_ABS, BoxMode.XYXY_ABS)
+    # predictions, object_mask = mask_predictor(image[..., ::-1], boxes, pad=0)
+    object_mask = np.ones_like(image[..., 0]) * 255
+
     hand_wrapper = ManopthWrapper().to('cpu')
     data = process_mocap_predictions(
-        mocap_predictions, image, hand_wrapper
+        mocap_predictions, image, hand_wrapper, mask=object_mask
     )
 
     hoi_predictor = get_hoi_predictor(args)
     output = hoi_predictor.forward_to_mesh(data)
-    vis_hand_object(output, data, image, args.out + '/test')
-
+    vis_hand_object(output, data, image, args.out + '/%s' % osp.basename(args.filename).split('.')[0])
     
 
 if __name__ == "__main__":
