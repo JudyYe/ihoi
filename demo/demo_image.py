@@ -49,11 +49,7 @@ def main(args):
     print(image.shape)
     
     # precit hand
-    original_dir = os.getcwd()
-    os.chdir(original_dir + '/externals/frankmocap/')
-    print(os.getcwd())
     bbox_detector = get_handmocap_detector(args.view)
-    # Process Human Estimations.
     detect_output = bbox_detector.detect_hand_bbox(image[..., ::-1].copy())
     body_pose_list, body_bbox_list, hand_bbox_list, raw_hand_bboxes = detect_output
     res_img = visualizer.visualize(image, hand_bbox_list = hand_bbox_list)
@@ -63,8 +59,6 @@ def main(args):
     mocap_predictions = hand_predictor.regress(
         image[..., ::-1], hand_bbox_list
     )
-    os.chdir(original_dir)
-    print(os.getcwd())
     # MOW model also takes in masks but currently we feed in all 1. You could specify masks yourself, 
     # or if you have bounding box for object masks, we can convert it to masks 
     

@@ -3,14 +3,14 @@ Wrapper for Hand Pose Estimator using HandMocap.
 Wrapper stolen from https://github.com/facebookresearch/phosa/blob/15f864d68ed3ed4536f019ad5713dda388d7c666/phosa/bodymocap.py
 See: https://github.com/facebookresearch/frankmocap
 """
+import os
 import os.path as osp
 import numpy as np
 import torch
 import sys
 
-
-# sys.path.append('externals/frankmocap', )
-# sys.path.append('externals/frankmocap/detectors/body_pose_estimator/', )
+sys.path.append('externals/frankmocap', )
+sys.path.append('externals/frankmocap/detectors/body_pose_estimator/', )
 
 from handmocap.hand_mocap_api import HandMocap
 from handmocap.hand_bbox_detector import HandBboxDetector
@@ -74,8 +74,11 @@ def process_mocap_predictions(mocap_predictions, image, hand_wrapper=None, mask=
 
 
 def get_handmocap_detector(view_type='ego_centric'):
+    original_dir = os.getcwd()
+    os.chdir(original_dir + '/externals/frankmocap/')
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     bbox_detector =  HandBboxDetector(view_type, device)
+    os.chdir(original_dir)
     return bbox_detector
 
 
