@@ -20,7 +20,8 @@ import skimage.measure
 import numpy as np
 from scipy.spatial.distance import cdist
 import re
-from torch._six import container_abcs, string_classes, int_classes
+from torch._six import string_classes
+import collections.abc as container_abcs
 
 import trimesh
 import torch
@@ -1636,7 +1637,7 @@ def collate_meshes(batch):
             return torch.as_tensor(batch)
     elif isinstance(elem, float):
         return torch.tensor(batch, dtype=torch.float64)
-    elif isinstance(elem, int_classes):
+    elif isinstance(elem, int):
         return torch.tensor(batch)
     elif isinstance(elem, string_classes):
         return batch
