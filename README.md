@@ -61,7 +61,7 @@ If you use find this code helpful, please consider citing:
     author = {Ye, Yufei
               and Gupta, Abhinav
               and Tulsiani, Shubham},
-    title = {What's in your hands?3D Reconstruction of Generic Objects in Hands},
+    title = {What's in your hands? 3D Reconstruction of Generic Objects in Hands},
     booktitle = {CVPR},
     year={2022}
 }
