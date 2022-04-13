@@ -17,6 +17,4 @@ jupyter
 trimesh
 submitit
 easydict
-iopath
-fvcore
 omegaconf
