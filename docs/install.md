@@ -16,13 +16,20 @@
   pip install -r docs/requirements.txt
   ```
 
-- Install [Detectron2](https://github.com/facebookresearch/detectron2) (for hand detection)
+<!-- - Install [Detectron2](https://github.com/facebookresearch/detectron2) (for hand detection)
+```
+cd external
+!git clone --branch v0.6 https://github.com/facebookresearch/detectron2.git detectron2
+# install detectron2 from source
+!pip install -e detectron2_repo
+
+```
   - If you followed the versions mentioned above (pytorch 1.6.0, CUDA 10.1, on Linux), you may try the following:
   ```
     python -m pip install detectron2==0.6 -f \
     https://dl.fbaipublicfiles.com/detectron2/wheels/cu102/torch1.8/index.html
   ```
-  - If it doesn't work, follow the instruction of [Detectron2](https://github.com/facebookresearch/detectron2/blob/master/INSTALL.md)
+  - If it doesn't work, follow the instruction of [Detectron2](https://github.com/facebookresearch/detectron2/blob/master/INSTALL.md) -->
   
 - Install pytorch3d (optional, for pytorch3d renderering)
   - We use pytorch3d for rendering.
@@ -33,7 +40,7 @@
   - If it doesn't work, follow the instruction of [Pytorch3D](https://github.com/facebookresearch/pytorch3d/blob/master/INSTALL.md)
 
 
-- Install other third-party libraries+ download pretrained models and sample data, including: [FrankMocap](https://github.com/facebookresearch/frankmocap/), [MANO](https://github.com/hassony2/manopth)
+- Install other third-party libraries+ download pretrained models and sample data, including: [FrankMocap](https://github.com/facebookresearch/frankmocap/), [MANO](https://github.com/hassony2/manopth), [Detectron2](https://github.com/facebookresearch/detectron2)
   - Run the following script
   ```
   sh scripts/one_click.sh
