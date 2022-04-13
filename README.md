@@ -22,7 +22,7 @@ See [`install.md`](docs/install.md)
 
 - Or python script
     ```
-    python -m demo.demo_image --filename demo/test.jpg --out output/ -e weights/
+    python -m demo.demo_image --filename demo/test.jpg --out output/ -e weights/mow/
     ```
 
 
