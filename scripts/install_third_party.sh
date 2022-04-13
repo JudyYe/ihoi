@@ -3,7 +3,8 @@ set -x
 # Install Frankmocap
 rm -r externals/frankmocap
 mkdir -p externals
-git clone https://github.com/facebookresearch/frankmocap.git externals/frankmocap
+# my modification on relative path
+git clone https://github.com/judyye/frankmocap.git externals/frankmocap
 cd externals/frankmocap
 bash scripts/install_frankmocap.sh
 cd ../..
