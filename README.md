@@ -24,7 +24,7 @@ See [`install.md`](docs/install.md)
     ```
     python -m demo.demo_image --filename demo/test.jpg --out output/ -e weights/mow/
     ```
-
+We also provide some other images `docs/demo_%02d.jpg` for you to play around.
 
 ## Evaluation 
 
