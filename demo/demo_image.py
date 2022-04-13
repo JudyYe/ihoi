@@ -1,5 +1,5 @@
 import argparse
-import logging
+import os
 import os.path as osp
 from demo import demo_utils
 
@@ -48,6 +48,10 @@ def main(args):
     image = np.array(image)
     print(image.shape)
     
+    # precit hand
+    original_dir = os.getcwd()
+    os.chdir(original_dir + 'externals/frankmocap/')
+    print(os.getcwd())
     bbox_detector = get_handmocap_detector(args.view)
     # Process Human Estimations.
     detect_output = bbox_detector.detect_hand_bbox(image[..., ::-1].copy())
@@ -59,7 +63,8 @@ def main(args):
     mocap_predictions = hand_predictor.regress(
         image[..., ::-1], hand_bbox_list
     )
-
+    os.chdir(original_dir)
+    print(os.getcwd())
     # MOW model also takes in masks but currently we feed in all 1. You could specify masks yourself, 
     # or if you have bounding box for object masks, we can convert it to masks 
     
@@ -69,6 +74,7 @@ def main(args):
     # predictions, object_mask = mask_predictor(image[..., ::-1], boxes, pad=0)
     object_mask = np.ones_like(image[..., 0]) * 255
 
+    # predict hand-held object
     hand_wrapper = ManopthWrapper().to('cpu')
     data = process_mocap_predictions(
         mocap_predictions, image, hand_wrapper, mask=object_mask
