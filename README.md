@@ -29,12 +29,12 @@ We also provide some other images `docs/demo_%02d.jpg` for you to play around.
 ## Evaluation 
 
 Coming soon
-```
+<!-- ```
 python -m models.ihoi   --eval --ckpt PATH_TO_YOUR_CKPT/checkpoints/last.ckpt  
 
 python -m models.ihoi   --eval --ckpt PATH_TO_YOUR_CKPT/checkpoints/last.ckpt  [--config experiments/[ho3d,mow].yaml  --slurm]
 
-```
+``` -->
 
 ## Train your own model
 
