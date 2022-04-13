@@ -35,7 +35,7 @@ cd external
   - We use pytorch3d for rendering.
   - You may try the following (pytorch 1.8.0, on Linux and Mac).
     ```
-    pip install pytorch3d
+    conda install pytorch3d -c pytorch3d
     ```
   - If it doesn't work, follow the instruction of [Pytorch3D](https://github.com/facebookresearch/pytorch3d/blob/master/INSTALL.md)
 

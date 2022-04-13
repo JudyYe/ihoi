@@ -1,4 +1,7 @@
 set -x 
-gdown xxx
-tar xf xxx.tar
-rm -r xxx.tar
+
+gdown 1kN3w2In_hjq17GvBrUI5W3aNZ2NBO0l8
+
+tar zxf release_model.tar.gz
+mv release_model weights
+rm -r release_model.tar.gz
