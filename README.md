@@ -67,25 +67,3 @@ If you use find this code helpful, please consider citing:
 }
 ```
 
-## TODO
-- Demo:
-    + [ ] support left hand
-- preprocess:
-    + [ ] provide cached data
-    + [ ] how to create cached data
-- eval:
-    + [ ] test time refinement
-    + [ ] predicted hand eval
-    + [ ] add more demo images
-    + [ ] models
-
-
-
-### Acknowledgement
-The repository is inspired from, The authors would like to thank the authors  inspired from 
-- [FrankMocap](https://github.com/facebookresearch/frankmocap/blob/main/docs/INSTALL.md).    
-- [Phosa]()
-- [DeepSDF]()
-- [GraspingField]()
-- [Mano]() 
-and many others... 
