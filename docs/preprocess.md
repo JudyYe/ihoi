@@ -23,11 +23,14 @@ data/
 ```
 
 ## Use our preprocessed data
-We provide our preprocessed `cache` and `mesh_sdf`. These can be downloaded from [here](). You need to unzip it and put it under `data/` folder.
+We provide our preprocessed `cache` and `mesh_sdf`. These can be downloaded from [here](https://drive.google.com/drive/folders/1v6Pw6vrOGIg6HUEHMVhAQsn-JLBWSHWu?usp=sharing). You need to unzip it and put it under `data/` folder.
 
 
 ## Create your own cache data
+
+Follow DeepSDF to generate SDF data `mesh_sdf/`.  Modify [`this line`](https://github.com/facebookresearch/DeepSDF/blob/main/src/PreprocessMesh.cpp#L384) `fitToUnitSphere` to `False`.
 ```
-python preprocess/generate_sdf.py
+    float max_dist = BoundingCubeNormalization(geom, false);
 ```
-(Coming soon)
+
+The dataloader script will automatically  generate `cache` if cache is not found. 
