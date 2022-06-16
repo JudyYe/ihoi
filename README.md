@@ -4,7 +4,7 @@ in CVPR 2022
 
 Our work aims to reconstruct hand-held objects given a single RGB image. In contrast to prior works that typically assume known 3D templates and reduce the problem to 3D pose estimation, our work reconstructs generic hand-held object without knowing their 3D templates. 
 
-[[Project Page]](https://judyye.github.io/ihoi) [[Video]](https://youtu.be/-hHlkWwENiI) [[Colab Demo]](https://colab.research.google.com/drive/1FdaBn4HQpf9p192CnEl25BQCxAzVfnzT?usp=sharing) [[Demo Code]](demo.ipynb) [[Arxiv]]() 
+[[Project Page]](https://judyye.github.io/ihoi) [[Video]](https://youtu.be/M3lC60wnwEY) [[Colab Demo]](https://colab.research.google.com/drive/1FdaBn4HQpf9p192CnEl25BQCxAzVfnzT#scrollTo=9qvQ375HnMlH) [[Demo Code]](demo.ipynb) [[Arxiv]]() 
 
 
 
@@ -22,19 +22,17 @@ See [`install.md`](docs/install.md)
 
 - Or python script
     ```
+    python -m demo.demo_image --filename demo/test.jpg --out output/ -e weights/
+    ```
+
+- Step by step [interactive notebook](demo.ipynb) 
+
+- Or python script
+    ```
     python -m demo.demo_image --filename demo/test.jpg --out output/ -e weights/mow/
     ```
 We also provide some other images `docs/demo_%02d.jpg` for you to play around.
 
-## Evaluation 
-
-Coming soon
-<!-- ```
-python -m models.ihoi   --eval --ckpt PATH_TO_YOUR_CKPT/checkpoints/last.ckpt  
-
-python -m models.ihoi   --eval --ckpt PATH_TO_YOUR_CKPT/checkpoints/last.ckpt  [--config experiments/[ho3d,mow].yaml  --slurm]
-
-``` -->
 
 ## Train your own model
 
@@ -67,14 +65,3 @@ If you use find this code helpful, please consider citing:
 }
 ```
 
-## TODO
-- Demo:
-    + [ ] support left hand
-- preprocess:
-    + [ ] provide cached data
-    + [ ] how to create cached data
-- eval:
-    + [ ] test time refinement
-    + [ ] predicted hand eval
-    + [ ] add more demo images
-    + [ ] models

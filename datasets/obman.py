@@ -12,7 +12,7 @@ import numpy as np
 import tqdm
 from PIL import Image
 from nnutils import mesh_utils, geom_utils
-
+from nnutils.hand_utils import extract_rt_pose
 
 class Obman(BaseData):
     def __init__(self, cfg, dataset: str, split='val', is_train=True,
@@ -32,8 +32,8 @@ class Obman(BaseData):
         else:
             self.cls = ''
 
-        self.cache_file = osp.join(self.data_dir, 'Cache', '%s_%s.pkl' % (dataset, self.split))
-        self.cache_mesh = osp.join(self.data_dir, 'Cache', '%s_%s_mesh.pkl' % (dataset, self.split))
+        self.cache_file = osp.join(osp.dirname(self.data_dir), 'cache', '%s_%s.pkl' % (dataset, self.split))
+        self.cache_mesh = osp.join(osp.dirname(self.data_dir), 'cache', '%s_%s_mesh.pkl' % (dataset, self.split))
 
         self.shape_dir = os.path.join(self.cfg.DB.DIR, 'obmanboj', '{}', '{}', 'models', 'model_normalized.obj')
         self.image_dir = osp.join(self.data_dir, split, 'rgb', '{}.jpg')
@@ -45,10 +45,10 @@ class Obman(BaseData):
             self.anno[key] = []
         
         if self.cache and osp.exists(self.cache_file):
-            print('!! Load from cache !!')
+            print('!! Load from cache !!', self.cache_file)
             self.anno = pickle.load(open(self.cache_file, 'rb'))
         else:
-
+            print('making cache in %s' % self.cache_file)
             index_list = [line.strip() for line in open(osp.join(self.data_dir, '%s.txt' % self.split))]
             for i, index in enumerate(tqdm.tqdm(index_list)):
                 dset = self.cfg.DB.NAME
@@ -59,16 +59,21 @@ class Obman(BaseData):
                 with open(meta_path, "rb") as meta_f:
                     meta_info = pickle.load(meta_f)
 
+                global_rt, art_pose, obj_pose = extract_rt_pose(meta_info, self.pose_wrapper)
+                meta_info['cTh'] = global_rt
+                meta_info['hA'] = art_pose
+                meta_info['cTo'] = obj_pose
+
                 self.anno['index'].append(index)
                 self.anno['cad_index'].append(osp.join(meta_info["class_id"], meta_info["sample_id"]))
-                cTo = torch.FloatTensor([meta_info['cTo']])
-                cTh = torch.FloatTensor([meta_info['cTh']])
+                cTo = meta_info['cTo']
+                cTh = meta_info['cTh']
                 hTc = geom_utils.inverse_rt(mat=cTh, return_mat=True)
                 hTo = torch.matmul(hTc, cTo)
 
                 self.anno['cTh'].append(cTh[0])
                 self.anno['hTo'].append(hTo[0])
-                self.anno['hA'].append(meta_info['hA'])
+                self.anno['hA'].append(meta_info['hA'].detach().numpy()[0])
 
             os.makedirs(osp.dirname(self.cache_file), exist_ok=True)
             print('save cache')
@@ -78,11 +83,11 @@ class Obman(BaseData):
 
     def preload_mesh(self):
         if self.cache and osp.exists(self.cache_mesh):
-            print('!! Load from cache !!')
+            print('!! Load from cache !!', self.cache_mesh)
             self.obj2mesh = pickle.load(open(self.cache_mesh, 'rb'))
         else:
             self.obj2mesh = {}
-            print('load mesh')
+            print('load mesh', self.cache_mesh)
             for i, cls_id in tqdm.tqdm(enumerate(self.anno['cad_index']), total=len(self.anno['cad_index'])):
                 key = cls_id
                 cls, id = key.split('/')
@@ -139,3 +144,4 @@ class Obman(BaseData):
         sample = {key: self.anno[key][idx] for key in self.anno}
         sample['mesh'] = self.obj2mesh[sample['cad_index']]
         return sample
+

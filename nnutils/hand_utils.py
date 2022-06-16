@@ -2,6 +2,7 @@
 # Written by Yufei Ye (https://github.com/JudyYe)
 # --------------------------------------------------------
 from __future__ import print_function
+import numpy as np
 import pickle
 import os.path as osp
 from typing import Tuple
@@ -265,3 +266,61 @@ def get_nTh(hand_wrapper, hA, r, inverse=False, center=None):
     if inverse:
         mat = geom_utils.inverse_rt(mat=mat, return_mat=True)
     return mat
+
+
+
+def extract_rt_pose(meta_info, pose_wrapper):
+    device = 'cpu'
+    cam_extr = np.array(
+        [
+            [1.0, 0.0, 0.0, 0.0],
+            [0.0, -1.0, 0.0, 0.0],
+            [0.0, 0.0, -1.0, 0.0],
+            [0, 0, 0, 1]
+        ]
+    ).astype(np.float32)
+    cTw = Transform3d(device=device, matrix=torch.FloatTensor([cam_extr]).transpose(1, 2).to(device))
+    wTo = Transform3d(device=device, matrix=torch.FloatTensor([meta_info['affine_transform']]).transpose(1, 2).to(device))
+    cTo = wTo.compose(cTw)
+    cTo_mat = cTo.get_matrix().transpose(-1, -2).cpu()
+
+    # src mesh
+    zeros = torch.zeros([1, 3], device=device, dtype=torch.float32)
+    art_pose = torch.FloatTensor([meta_info['pca_pose']]).to(device)
+    art_pose = pose_wrapper.pca_to_pose(art_pose) - pose_wrapper.hand_mean
+    hHand, _ = pose_wrapper(None, art_pose, zeros, zeros, mode='inner')
+    # dst mesh
+    wVerts = torch.FloatTensor([meta_info['verts_3d']]).to(device)
+    textures = TexturesVertex(torch.ones_like(wVerts)).to(device)
+    wHand = Meshes(wVerts, pose_wrapper.hand_faces, textures)
+
+    wTh = solve_rt(hHand.verts_padded(), wHand.verts_padded())  
+    cTh = wTh.compose(cTw)
+    cTh_mat = cTh.get_matrix().transpose(-1, -2).cpu()
+
+    return cTh_mat, art_pose.cpu(), cTo_mat
+
+
+def solve_rt(src_mesh, dst_mesh):
+    """
+    (N, P, 3), (N, P, 3)
+    """
+    device = src_mesh.device
+    src_centroid = torch.mean(src_mesh, -2, keepdim=True)
+    dst_centroid = torch.mean(dst_mesh, -2, keepdim=True)
+    src_bar = (src_mesh - src_centroid)
+    dst_bar = (dst_mesh - dst_centroid)
+    cov = torch.bmm(src_bar.transpose(-1, -2), dst_bar)
+    u, s, v = torch.svd(cov)
+    vh = v.transpose(-1, -2)
+    rot_t = torch.matmul(u, vh)
+    rot = rot_t.transpose(-1, -2)  # v, uh
+
+    trans = dst_centroid - torch.matmul(src_centroid, rot_t)  # (N, 1, 3)?
+
+    rot = Rotate(R=rot_t, device=device)
+    trans = Translate(trans.squeeze(1), device=device)
+
+    rt = rot.compose(trans)
+
+    return rt
