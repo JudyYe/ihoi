@@ -20,7 +20,9 @@ import skimage.measure
 import numpy as np
 from scipy.spatial.distance import cdist
 import re
-from torch._six import container_abcs, string_classes, int_classes
+import collections.abc as container_abcs
+from torch._six import string_classes
+int_classes = int
 
 import trimesh
 import torch

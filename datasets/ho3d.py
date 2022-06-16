@@ -36,14 +36,16 @@ class HO3D(BaseData):
 
         if self.use_gt == 'none':
             if not is_train:
+                # hand pose from frankmocap prediction
                 meta_folder = 'meta_plus'
             else:
+                # hand pose from GT
                 meta_folder = 'meta_gt'
         else:
             meta_folder = 'meta_%s' % self.use_gt
 
-        self.cache_file = osp.join(self.data_dir, 'Cache', '%s_%s_%s.pkl' % (dataset, self.split, self.use_gt))
-        self.cache_mesh = osp.join(self.data_dir, 'Cache', '%s_%s_mesh.pkl' % (dataset, self.split))
+        self.cache_file = osp.join(osp.dirname(self.data_dir), 'cache', '%s_%s_%s.pkl' % (dataset, self.split, self.use_gt))
+        self.cache_mesh = osp.join(osp.dirname(self.data_dir), 'cache', '%s_%s_mesh.pkl' % (dataset, self.split))
         self.mask_dir = ''
         self.meta_dir = os.path.join(self.data_dir, '{}', '{}', meta_folder, '{}.pkl')
         self.image_dir = osp.join(self.data_dir, '{}', '{}', 'rgb', '{}.jpg')
@@ -55,7 +57,6 @@ class HO3D(BaseData):
             print('!! Load from cache !!', self.cache_file)
             self.anno = pickle.load(open(self.cache_file, 'rb'))
         else:
-            print(self.meta_dir)
             print('creating cahce', self.meta_dir)
             # filter 1e-3
             df = pd.read_csv(osp.join(self.data_dir, '%s%s.csv' % (self.split, self.suf)))
@@ -140,6 +141,7 @@ class HO3D(BaseData):
         return self.anno['cam'][idx]
 
     def get_obj_mask(self, index):
+        """fake mask"""
         image = np.array(Image.open(self.image_dir.format(*index)))
         H, W, _= image.shape
         mask = Image.fromarray(np.ones([H, W]).astype(np.uint8) * 255 )

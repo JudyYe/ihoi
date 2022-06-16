@@ -28,7 +28,7 @@ class BaseData(Dataset):
         raise NotImplementedError
 
     def get_sdf_files(self, cad_idx):
-        sdf_dir = osp.join(self.cfg.DB.DIR, 'sdf/SdfSamples/', self.dataset, 'all')
+        sdf_dir = osp.join(self.cfg.DB.DIR, 'mesh_sdf/SdfSamples/', self.dataset, 'all')
         filename = osp.join(sdf_dir, cad_idx + '.npz')
         assert osp.exists(filename), 'Not exists %s' % filename
         return filename
