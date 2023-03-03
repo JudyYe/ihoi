@@ -8,6 +8,7 @@ import os.path as osp
 from typing import Tuple
 import torch
 import torch.nn as nn
+from pytorch3d.io import load_obj
 from pytorch3d.renderer import TexturesVertex
 from pytorch3d.structures import Meshes
 from pytorch3d.transforms import Transform3d, Rotate, Translate
@@ -17,10 +18,11 @@ from manopth.tensutils import th_with_zeros, th_posemap_axisang
 
 from nnutils import geom_utils
 
+# from jutils.hand_utils import ManopthWrapper
 
 class ManopthWrapper(nn.Module):
     # TODO: mano
-    def __init__(self, mano_path='externals/mano/', **kwargs):
+    def __init__(self, mano_path='/home/yufeiy2/scratch/pretrain/smpl/mano_v1_2/models/', side='right', **kwargs):
         super().__init__()
         self.mano_layer_right = ManoLayer(
             mano_root=mano_path, side='right', use_pca=kwargs.get('use_pca', False), ncomps=kwargs.get('ncomps', 45),
@@ -42,6 +44,17 @@ class ManopthWrapper(nn.Module):
                     self.register_buffer('contact_index_%d' % ind, torch.LongTensor(verts_idx))
             self.register_buffer('contact_index' , torch.LongTensor(contact_list))
 
+        # load uv map
+        fname = osp.join(mano_path, kwargs.get('uv', f'MANO_UV_{side}'))
+        if kwargs.get('closed', True):
+            if osp.exists(fname + '_closed.obj'):
+                fname = fname + '_closed'
+            else:
+                print('### Warning! hand mesh not closed.')
+        rtn = load_obj(fname + '.obj')
+        self.register_buffer('verts_uv', rtn[2].verts_uvs[None])
+        self.register_buffer('faces_uv', rtn[1].textures_idx[None])
+        self.register_buffer('hand_faces', rtn[1].verts_idx[None])
 
     def forward(self, glb_se3, art_pose, axisang=None, trans=None, return_mesh=True, mode='outer', **kwargs) -> Tuple[Meshes, torch.Tensor]:
         N = len(art_pose)

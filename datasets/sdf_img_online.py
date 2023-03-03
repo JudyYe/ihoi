@@ -2,6 +2,7 @@
 # Written by Yufei Ye (https://github.com/JudyYe)
 # --------------------------------------------------------
 from __future__ import print_function
+from random import randint, choice, random
 import numpy as np
 import torch
 import torch.nn as nn
@@ -41,11 +42,24 @@ class SdfImg(nn.Module):
         ]) if self.train else transforms.ToTensor()
 
     def preload_anno(self):
-        self.dataset.preload_anno(self.anno.keys())
+        self.dataset.preload_anno_light(self.anno.keys())
         for key in self.anno:
             self.anno[key] = self.dataset.anno[key]
         self.obj2mesh = self.dataset.obj2mesh
         self.map = self.dataset.map
+
+    def random_sample(self):
+        return self.__getitem__(randint(0, self.__len__() - 1))
+
+    def sequential_sample(self, ind):
+        if ind >= self.__len__() - 1:
+            return self.__getitem__(0)
+        return self.__getitem__(ind + 1)
+
+    def skip_sample(self, ind):
+        if self.shuffle:
+            return self.random_sample()
+        return self.sequential_sample(ind=ind)
 
     def __len__(self):
         return len(self.anno['index'])
@@ -57,9 +71,16 @@ class SdfImg(nn.Module):
         cad_idx = self.anno['cad_index'][idx]
         filename = self.dataset.get_sdf_files(cad_idx)
 
+        try:
+            anno = self.dataset.get_anno(idx)
+        except FileNotFoundError as e:
+            print(f"An exception occurred trying to load file {idx}.")
+            print(f"Skipping index {idx}")
+            return self.skip_sample(idx)
+
         oPos_sdf, oNeg_sdf = unpack_sdf_samples(filename, None)
-        hTo = torch.FloatTensor(self.anno['hTo'][idx])
-        hA = torch.FloatTensor(self.anno['hA'][idx])
+        hTo = torch.FloatTensor(anno['hTo'])
+        hA = torch.FloatTensor(anno['hA'])
         nTh = get_nTh(self.hand_wrapper, hA[None], self.cfg.DB.RADIUS)[0]
 
         nPos_sdf = self.norm_points_sdf(oPos_sdf, nTh @ hTo) 
@@ -102,9 +123,9 @@ class SdfImg(nn.Module):
         sample['indices'] = idx + self.base_idx
 
         # add crop?? 
-        sample['cTh'] = geom_utils.matrix_to_se3(self.anno['cTh'][idx].squeeze(0))
+        sample['cTh'] = geom_utils.matrix_to_se3(anno['cTh'].squeeze(0))
         
-        sample['bbox'] = self.get_bbox(idx)
+        sample['bbox'] = self.get_bbox(idx, anno['bbox'])
         sample['cam_f'], sample['cam_p'] = self.get_f_p(idx, sample['bbox'])
         try:
             sample['image'] = self.get_image(idx, sample['bbox'])
@@ -180,8 +201,8 @@ class SdfImg(nn.Module):
             index = '/'.join(str(index))
         return index
 
-    def get_bbox(self, idx):
-        bbox =  self.dataset.get_bbox(idx)  # in scale of pixel torch.floattensor 
+    def get_bbox(self, idx, bbox=None):
+        # bbox =  self.dataset.get_bbox(idx)  # in scale of pixel torch.floattensor 
         bbox = image_utils.square_bbox(bbox)
         bbox = self.jitter_bbox(bbox)
         return bbox
@@ -256,8 +277,11 @@ def vis_db():
 
     from . import build_dataloader
     from nnutils import image_utils
+
+    torch.manual_seed(123)
+    np.random.seed(123)
     jitter = False
-    data_loader = build_dataloader(cfg, 'test', jitter, shuffle=False, bs=8)
+    data_loader = build_dataloader(cfg, 'test', jitter, shuffle=True, bs=8)
     device = 'cuda:0'
     hand_wrapper = hand_utils.ManopthWrapper().to(device)
 
@@ -283,7 +307,20 @@ def vis_db():
         image_utils.save_images(image['image'], osp.join(save_dir, '%d_cObj_%s_%d' % (i, cfg.DB.NAME, jitter)), 
             bg=data['image'], mask=image['mask'], scale=True)
 
-        if i >= 0 :
+        nSdf = data['nSdf'][..., :3] 
+        cTn = geom_utils.compose_se3(data['cTh'], geom_utils.inverse_rt(data['nTh']))
+        nObj = mesh_utils.pc_to_cubic_meshes(nSdf)
+        cObj = mesh_utils.apply_transform(nObj, cTn)
+        cHoi = mesh_utils.join_scene([cHand, cObj])
+
+        image_list = mesh_utils.render_geom_rot(cHoi, view_centric=True, cameras=cameras)
+        image_utils.save_gif(image_list, osp.join(save_dir, '%d_cCube' % i))
+        image = mesh_utils.render_mesh(cHoi, cameras)
+        image_utils.save_images(image['image'], osp.join(save_dir, '%d_cCube_%s_%d' % (i, cfg.DB.NAME, jitter)), 
+            bg=data['image'], mask=image['mask'], scale=True)
+
+
+        if i >= 10 :
             break
 
 

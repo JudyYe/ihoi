@@ -70,7 +70,7 @@ def slurm_wrapper(args, save_dir, func, func_kwargs, resubmit=True):
     save_dir = save_dir  + '/submitit_cache'
     if args.slurm:
         # asks SLURM to send USR1 signal 30 seconds before the time limit
-        additional_parameters = {"signal": 'SIGUSR1@90', }
+        additional_parameters = {"signal": 'SIGUSR1@120', }
         executor = submitit.AutoExecutor(folder=save_dir)
         executor.update_parameters(
             tasks_per_node=args.sl_ntask_pnode,
@@ -107,12 +107,12 @@ def add_slurm_args(arg_parser):
         help="If set, debugging messages will be printed",
     )
     arg_parser.add_argument("--sl_time",default=1080, type=int)  # 16 hrs
-    arg_parser.add_argument("--sl_dir", default='/checkpoint/yufeiy2/slurm_cache_shot', type=str)  
+    arg_parser.add_argument("--sl_dir", default='/home/yufeiy2/slurm_cache_shot', type=str)  
     arg_parser.add_argument("--sl_work",default=10, type=int)
     arg_parser.add_argument("--sl_node",default=1, type=int)  # 16 hrs
-    arg_parser.add_argument("--sl_ngpu",default=8, type=int)
+    arg_parser.add_argument("--sl_ngpu",default=1, type=int)
     arg_parser.add_argument("--sl_ntask_pnode",default=1, type=int)
-    arg_parser.add_argument("--sl_part",default='learnlab', type=str)
+    arg_parser.add_argument("--sl_part",default='abhinavlong,shubhamlong,all', type=str)
     return arg_parser
 
 

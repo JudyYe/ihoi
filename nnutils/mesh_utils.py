@@ -493,6 +493,7 @@ def render_mesh_flow(wMeshes, cam1: PerspectiveCameras, cam2: PerspectiveCameras
     c2Tw = kwargs.get('c2Tw', None)
     raster_settings = kwargs.get('raster_settings',
                                  RasterizationSettings(
+        bin_size=0,
                                      image_size=image_size, 
                                      faces_per_pixel=1,
                                     perspective_correct=False,
@@ -561,6 +562,7 @@ def render_mesh(meshes: Meshes, cameras, rgb_mode=True, depth_mode=False, **kwar
     image_size = kwargs.get('out_size', 224)
     raster_settings = kwargs.get('raster_settings',
                                  RasterizationSettings(
+                                    bin_size=0,
                                      image_size=image_size, 
                                      faces_per_pixel=2,
                                      cull_backfaces=False))

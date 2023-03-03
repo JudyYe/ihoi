@@ -1,3 +1,17 @@
+# FT on HOI4D
+CUDA_VISIBLE_DEVICES=5 python -m models.ihoi \
+    --config experiments/hoi4d.yaml  \
+    --ckpt /home/yufeiy2/scratch/pretrain/ihoi/release_model/mow/checkpoints/last.ckpt \
+    EXP light_mow 
+    --slurm
+
+CUDA_VISIBLE_DEVICES=6 python -m models.ihoi \
+    --config experiments/hoi4d.yaml  \
+    --ckpt /home/yufeiy2/scratch/pretrain/ihoi/release_model/obman/checkpoints/last.ckpt \
+    EXP light_obman
+
+
+-
 python -m models.ihoi --config experiments/obman.yaml  --slurm EXP dev
 
 

@@ -11,11 +11,13 @@ def build_dataset(args, name, cls, split, is_train=True, **kwarg):
         from .ho3d import HO3D as dset
     elif name.startswith('mow'):
         from .mow import MOW as dset
+    elif name.startswith('hoi4d'):
+        from .hoi4d import HOI4D as dset
     else:
         raise NotImplementedError('not implemented %s' % name)
     dset = dset(args, name, split, is_train, data_dir=args.DB.DIR)
 
-    from .sdf_img import SdfImg
+    from .sdf_img_online import SdfImg
     dset = SdfImg(args, dset, is_train, **kwarg)
 
     dset.preload_anno()

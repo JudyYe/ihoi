@@ -17,6 +17,7 @@ from datasets import build_dataloader
 from models import dec, enc
 from nnutils.hand_utils import ManopthWrapper
 from nnutils import geom_utils, mesh_utils, slurm_utils
+from jutils import model_utils
 
 
 def get_hTx(frame, batch):
@@ -338,7 +339,9 @@ def main(cfg, args):
     model = IHoi(cfg)
     if args.ckpt is not None:
         print('load from', args.ckpt)
-        model = model.load_from_checkpoint(args.ckpt, cfg=cfg, strict=False)
+        state_dict = torch.load(args.ckpt,)['state_dict']
+        model_utils.load_my_state_dict(model, state_dict)
+        # model = model.load_from_checkpoint(args.ckpt, cfg=cfg, strict=False)
 
     # instantiate model
     if args.eval:
@@ -365,7 +368,7 @@ def main(cfg, args):
                         resume=args.slurm or args.ckpt is not None,
                         )
         checkpoint_callback = ModelCheckpoint(
-            save_top_k=1,
+            save_top_k=3,
             monitor='val_loss/dataloader_idx_0',
             mode='min',
             save_last=True,
@@ -385,7 +388,8 @@ def main(cfg, args):
                              logger=logger,
                              max_epochs=max_epoch,
                              callbacks=[checkpoint_callback, lr_monitor],
-                             progress_bar_refresh_rate=0 if args.slurm else None,            
+                             progress_bar_refresh_rate=0 if args.slurm else None,     
+                             resume_from_checkpoint=osp.join(cfg.MODEL_PATH, 'last.ckpt'), 
                              )
         trainer.fit(model)
 
@@ -400,4 +404,4 @@ if __name__ == '__main__':
     
     cfg = setup_cfg(args)
     save_dir = os.path.dirname(cfg.MODEL_PATH)
-    slurm_utils.slurm_wrapper(args, save_dir, main, {'args': args, 'cfg': cfg}, resubmit=False)
+    slurm_utils.slurm_wrapper(args, save_dir, main, {'args': args, 'cfg': cfg}, resubmit=True)
