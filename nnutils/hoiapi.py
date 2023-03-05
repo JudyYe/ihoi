@@ -33,6 +33,16 @@ class Predictor:
         self.hand_wrapper = ManopthWrapper().to(device)
     
     def forward_to_mesh(self, batch):
+        """
+
+        :param hA: (N, 45)
+        :param image: (N, 3, H, W)
+        :param obj_mask: (N, 1, H, W)
+        :param cTh: (N, se3)
+        :param cam_f: (N, 2)
+        :param cam_p: (N, 2)
+        :return: _description_
+        """
         model = self.model
         cfg = self.model.cfg
         hand_wrapper = self.hand_wrapper
@@ -69,6 +79,11 @@ class Predictor:
         hObj = mesh_utils.apply_transform(xObj, hTx)
         out['hObj'] = hObj
         out['hHand'] = hHand
+
+        cObj = mesh_utils.apply_transform(xObj, cTx)
+        cHand = mesh_utils.apply_transform(hHand, batch['cTh'])
+        out['cObj'] = cObj
+        out['cHand'] = cHand
         return out
 
 
