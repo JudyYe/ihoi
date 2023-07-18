@@ -4,7 +4,7 @@ in CVPR 2022
 
 Our work aims to reconstruct hand-held objects given a single RGB image. In contrast to prior works that typically assume known 3D templates and reduce the problem to 3D pose estimation, our work reconstructs generic hand-held object without knowing their 3D templates. 
 
-[[Project Page]](https://judyye.github.io/ihoi) [[Video]](https://youtu.be/M3lC60wnwEY) [[Colab Demo]](https://colab.research.google.com/drive/1FdaBn4HQpf9p192CnEl25BQCxAzVfnzT#scrollTo=9qvQ375HnMlH) [[Demo Code]](demo.ipynb) [[Arxiv]]() 
+[[Project Page]](https://judyye.github.io/ihoi) [[Video]](https://youtu.be/M3lC60wnwEY) [[Colab Demo]](https://colab.research.google.com/drive/1FdaBn4HQpf9p192CnEl25BQCxAzVfnzT#scrollTo=9qvQ375HnMlH) [[Demo Code]](demo.ipynb) [[Arxiv]](https://arxiv.org/abs/2204.07153) 
 
 
 
