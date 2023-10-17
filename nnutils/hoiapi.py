@@ -103,9 +103,8 @@ def vis_hand_object(output, data, image, save_dir):
     image_utils.save_images(iHoi['image'], save_dir + '_cHoi', bg=data['image']/2+0.5, mask=iHoi['mask'])
     image_utils.save_images(data['image']/2+0.5, save_dir + '_inp')
 
-    image_list = mesh_utils.render_geom_rot(cHoi, cameras=cameras, view_centric=True)
+    image_list = mesh_utils.render_geom_rot(cHoi, cameras=cameras, view_centric=True, out_size=512)
     image_utils.save_gif(image_list, save_dir + '_cHoi')
 
     mesh_utils.dump_meshes([save_dir + '_hoi'], hHoi)
-
 

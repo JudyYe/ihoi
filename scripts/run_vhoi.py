@@ -1,3 +1,4 @@
+from tqdm import tqdm
 from glob import glob
 from torchvision.transforms import ToTensor
 from PIL import Image
@@ -15,21 +16,16 @@ logging.getLogger().setLevel(logging.ERROR)
 
 from config.defaults import get_cfg_defaults
 
-from nnutils.hand_utils import ManopthWrapper
 # from nnutils.handmocap import get_handmocap_predictor, process_mocap_predictions, get_handmocap_detector
-from nnutils.hoiapi import vis_hand_object, Predictor
 from nnutils import model_utils
 # from nnutils import image_utils
 from jutils import mesh_utils, image_utils, geom_utils
-
-
 
 
 import torch
 assert torch.cuda.is_available()
 from nnutils.hoiapi import vis_hand_object, Predictor
 
-data_dir = '/home/yufeiy2/scratch/result/HOI4D/'
 
 device = 'cuda:0'
 def get_hoi_predictor(experiment_directory='weights/mow'):
@@ -44,7 +40,7 @@ def get_hoi_predictor(experiment_directory='weights/mow'):
     return predictor
 
 
-def get_data(vid):
+def get_data(vid, data_dir):
     vid_dir = osp.join(data_dir, vid,)
     image_file_list = sorted(glob(osp.join(vid_dir, 'image', '*.*g')))
     data_list = []
@@ -85,15 +81,88 @@ def get_fp_from_k(k_ndc):
     return f, p
 
 
+def render_video(data_list, video_dir, hoi_predictor, device, H):
+    name_list = ['input', 'render_0', 'render_1', 'jHoi', 'jObj', 'vHoi', 'vObj', 'vObj_t', 'vHoi_fix']
+    image_list = [[] for _ in name_list]
+
+    T = len(data_list) - 1
+    for t, data in enumerate(tqdm(data_list)):
+        data = model_utils.to_cuda(data, device)
+        out = hoi_predictor.forward_to_mesh(data)
+        jHand = out['hHand']
+        jObj = out['hObj']
+        cam_f = data['cam_f']
+        cam_p = data['cam_p']
+        cTh = data['cTh']
+        cTh_mat = geom_utils.se3_to_matrix(cTh)
+
+        K_ndc = mesh_utils.get_k_from_fp(cam_f, cam_p)
+    
+        image_list[0].append(data['image'] * 0.5 + 0.5)
+        hoi, _ = mesh_utils.render_hoi_obj_overlay(jHand, jObj, cTj=cTh_mat, H=H, K_ndc=K_ndc, bin_size=None)
+        image_list[1].append(hoi)
+
+        # rotate by 90 degree in world frame 
+        # 1. 
+        jTcp = mesh_utils.get_wTcp_in_camera_view(np.pi/2, cTw=cTh_mat)
+        hoi, _ = mesh_utils.render_hoi_obj_overlay(jHand, jObj, jTcp, H=H, K_ndc=K_ndc, bin_size=None)
+        image_list[2].append(hoi)
+
+        # in object frame
+
+        if t == T//2:
+            # coord = plot_utils.create_coord(device, size=1)
+            jHoi = mesh_utils.join_scene([jHand, jObj])
+            image_list[3] = mesh_utils.render_geom_rot(jHoi, scale_geom=True, out_size=H, bin_size=32) 
+            image_list[4] = mesh_utils.render_geom_rot(jObj, scale_geom=True, out_size=H, bin_size=32) 
+            
+            # rotation around z axis
+            vTj = torch.FloatTensor(
+                [[np.cos(np.pi/2), -np.sin(np.pi/2), 0, 0],
+                [np.sin(np.pi/2), np.cos(np.pi/2), 0, 0],
+                [0, 0, 1, 0],
+                [0, 0, 0, 1]]).to(device)[None].repeat(1, 1, 1)
+            vHoi = mesh_utils.apply_transform(jHoi, vTj)
+            vObj = mesh_utils.apply_transform(jObj, vTj)
+            image_list[5] = mesh_utils.render_geom_rot(vHoi, scale_geom=True, out_size=H, bin_size=32) 
+            image_list[6] = mesh_utils.render_geom_rot(vObj, scale_geom=True, out_size=H, bin_size=32) 
+
+        jHoi = mesh_utils.join_scene([jHand, jObj])                
+        vTj = torch.FloatTensor(
+            [[np.cos(np.pi/2), -np.sin(np.pi/2), 0, 0],
+            [np.sin(np.pi/2), np.cos(np.pi/2), 0, 0],
+            [0, 0, 1, 0],
+            [0, 0, 0, 1]]).to(device)[None].repeat(1, 1, 1)
+        vObj = mesh_utils.apply_transform(jObj, vTj)
+        iObj_list = mesh_utils.render_geom_rot(vObj, scale_geom=True, out_size=H, bin_size=32) 
+        image_list[7].append(iObj_list[t%len(iObj_list)])
+        
+        # HOI from fixed view point 
+        scale = mesh_utils.Scale(5.0).to(device)
+        trans = mesh_utils.Translate(0, 0.4, 0).to(device)
+        fTj = scale.compose(trans)
+        fHand = mesh_utils.apply_transform(jHand, fTj)
+        fObj = mesh_utils.apply_transform(jObj, fTj)
+        iHoi, iObj = mesh_utils.render_hoi_obj(fHand, fObj, 0, scale_geom=False, scale=1, bin_size=32)
+        image_list[8].append(iHoi)
+
+    # save 
+    for n, im_list in zip(name_list, image_list):
+        for t, im in enumerate(im_list):
+            image_utils.save_images(im, osp.join(video_dir, n, f'{t:03d}'))
+
+
 def save_render(save_dir, t, data, out, H=512, W=512):
     device = data['image'].device
     ww = hh = data['image'].size(-1)
     gt = data['image']
-    degree_list = [0, 45, 60, 90, 360-60, 360-90]
-    name_list = ['gt', 'overlay', ] + \
-        ['%d_hoi' % d for d in degree_list] + \
-            ['%d_obj' % d for d in degree_list]
+
+    degree_list = [0, 45, 60, 90, 180, 360-60, 360-90]
+    name_list = ['gt', 'overlay_hoi', 'overlay_obj']
+    for d in degree_list:
+        name_list += ['%d_hoi' % d, '%d_obj' % d]  
     image_list = [[] for _ in name_list]
+
     hObj = out['hObj']
     hHand = out['hHand']
     cTh = data['cTh']
@@ -101,24 +170,18 @@ def save_render(save_dir, t, data, out, H=512, W=512):
     cam_p = data['cam_p']
 
     gt = F.adaptive_avg_pool2d(gt, (H, W))
-
-    cameras = PerspectiveCameras(cam_f, cam_p, device=device)
-    cHoi = merge_hoi(out['cHand'], out['cObj'])
-    iHoi = mesh_utils.render_mesh(cHoi, cameras, out_size=H,)
-    image1, mask1 = iHoi['image'], iHoi['mask']
+    K_ndc = mesh_utils.get_k_from_fp(cam_f, cam_p)
+    hoi, obj = mesh_utils.render_hoi_obj_overlay(hHand, hObj, cTj=cTh, H=H, K_ndc=K_ndc)
     
-    image_list[0].append(gt)
-    image_list[1].append(image_utils.blend_images(image1, gt, mask1))  # view 0
+    image_list[0].append(gt*0.5+0.5)
+    image_list[1].append(hoi)
+    image_list[2].append(obj)
 
     for i, az in enumerate(degree_list):
-        image1, mask1 = render_az(hHand, hObj, cTh, az, H=H, W=W)
-        image_list[2 + i].append(torch.cat([image1, mask1], 1))
+        img1, img2 = mesh_utils.render_hoi_obj(hHand, hObj, az, cTj=cTh, H=H, W=W)
+        image_list[3 + 2*i].append(img1)  
+        image_list[3 + 2*i+1].append(img2) 
 
-    off = 2 + len(degree_list)
-    for i, az in enumerate(degree_list):
-        image1, mask1 = render_az(None, hObj, cTh, az, H=H, W=W, f=cam_f[0, 0])
-        image_list[off + i].append(torch.cat([image1, mask1], 1))
-    
     # save 
     for n, im_list in zip(name_list, image_list):
         im = im_list[-1]
@@ -148,29 +211,59 @@ def render_az(jHand, jObj, cTh, az, H, W, f=2):
 def main():
     model_dir = '/home/yufeiy2/scratch/result/ihoi/light_mow/hoi4d'
 
-    cat_list = "Mug,Bottle,Kettle,Bowl,Knife,ToyCar".split(',')
-    ind_list = [1,2]
-    index_list = [f"{cat}_{ind}" for ind in ind_list for cat in cat_list ]
+    if args.data == 'hoi4d':
+        cat_list = "Mug,Bottle,Kettle,Bowl,Knife,ToyCar".split(',')
+        ind_list = [1,2]
+        index_list = [f"{cat}_{ind}" for ind in ind_list for cat in cat_list ]
+        index_list = ['Kettle_1']
+        data_dir = '/home/yufeiy2/scratch/result/HOI4D/'
+
+    elif args.data == '3rd':
+        index_list = 'kettle6,knife1,bowl2,mug1,bottle2,bowl1,knife2,knife3,mug3,mug2,knife6,bottle6,kettle4'.split(',')
+        data_dir = '/home/yufeiy2/scratch/result/3rd_nocrop'
+    elif args.data == '1st':
+        index_list = 'bottle_1,bottle_2,mug_3,mug_1,kettle_4,kettle_2,kettle_5,knife_3,bowl_2,bowl_4,bowl_1'.split(',')
+        data_dir = '/home/yufeiy2/scratch/result/1st_nocrop'
 
     hoi_predictor = get_hoi_predictor(model_dir)
-    for vid in index_list:
+    for vid in tqdm(index_list):
         mesh_dir = osp.join(model_dir, vid, 'meshes')
         render_dir = osp.join(model_dir, vid, 'vis_clip')
+        video_dir = osp.join(model_dir, vid, 'vis_video')
 
-        data_list = get_data(vid)
+        data_list = get_data(vid, data_dir)
         T = len(data_list) - 1
-        render_step = [0, T//2, T-1]
-        for t, data in enumerate(data_list):
-            data = model_utils.to_cuda(data, device)
-            out = hoi_predictor.forward_to_mesh(data)
-            mesh_utils.dump_meshes([osp.join(mesh_dir, f'{t:03d}_hObj')], out['hObj'], )
-            mesh_utils.dump_meshes([osp.join(mesh_dir, f'{t:03d}_hHand')], out['hHand'], )
-            mesh_utils.dump_meshes([osp.join(mesh_dir, f'{t:03d}_cObj')], out['cObj'], )
-            mesh_utils.dump_meshes([osp.join(mesh_dir, f'{t:03d}_cHand')], out['cHand'], )
-    
-            if t in render_step:
-                save_render(render_dir, t, data, out,)
+        
+        T_num = args.T_num
+        if T_num is None:
+            T_list = [0, T//2, T-1]
+        else:
+            T_list = np.linspace(0, T-1, T_num).astype(np.int).tolist() 
+        print('len', T, T_list)
 
+        render_step = T_list
+        render_video(data_list, video_dir, hoi_predictor, device, 512)
+        # for t, data in enumerate(data_list):
+        #     data = model_utils.to_cuda(data, device)
+        #     out = hoi_predictor.forward_to_mesh(data)
+        #     mesh_utils.dump_meshes([osp.join(mesh_dir, f'{t:03d}_hObj')], out['hObj'], )
+        #     mesh_utils.dump_meshes([osp.join(mesh_dir, f'{t:03d}_hHand')], out['hHand'], )
+        #     mesh_utils.dump_meshes([osp.join(mesh_dir, f'{t:03d}_cObj')], out['cObj'], )
+        #     mesh_utils.dump_meshes([osp.join(mesh_dir, f'{t:03d}_cHand')], out['cHand'], )
+
+            # if t in render_step:
+            #     save_render(render_dir, t, data, out,)
+
+
+    return 
+
+import argparse
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--data', type=str, default='hoi4d')
+    parser.add_argument('--T_num', type=int, default=None)
+    return parser.parse_args()
 
 if __name__ == '__main__':
+    args = parse_args()
     main()    
