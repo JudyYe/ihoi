@@ -22,7 +22,7 @@ from nnutils import geom_utils
 
 class ManopthWrapper(nn.Module):
     # TODO: mano
-    def __init__(self, mano_path='/home/yufeiy2/scratch/pretrain/smpl/mano_v1_2/models/', side='right', **kwargs):
+    def __init__(self, mano_path='/private/home/yufeiy2/scratch/pretrain/smpl/mano_v1_2/models/', side='right', **kwargs):
         super().__init__()
         self.mano_layer_right = ManoLayer(
             mano_root=mano_path, side='right', use_pca=kwargs.get('use_pca', False), ncomps=kwargs.get('ncomps', 45),

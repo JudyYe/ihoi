@@ -333,6 +333,7 @@ class IHoi(pl.LightningModule):
         return recon_loss
 
 
+# @slurm_utils.slurm_engine()
 def main(cfg, args):
     pl.seed_everything(cfg.SEED)
     

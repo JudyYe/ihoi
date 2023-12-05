@@ -49,7 +49,9 @@ from trimesh.voxel.base import VoxelGrid
 from . import image_utils, geom_utils
 from .layers import grid_sample
 
-from .my_pytorch3d import Meshes, chamfer_distance
+# from .my_pytorch3d import Meshes, chamfer_distance
+from .my_pytorch3d import chamfer_distance
+from pytorch3d.structures import Meshes
 # ### Mesh IO Utils ###
 def meshfile_to_glb(mesh_file, out_file):
     mesh = trimesh.load(mesh_file)  

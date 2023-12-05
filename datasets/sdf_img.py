@@ -289,5 +289,5 @@ def vis_db():
 
 if __name__ == '__main__':
     import os.path as osp
-    save_dir = '/home/yufeiy2/scratch/result/ihoi/vis_sdf'
+    save_dir = '/private/home/yufeiy2/scratch/result/ihoi/vis_sdf'
     vis_db()

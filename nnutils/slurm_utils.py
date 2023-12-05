@@ -60,7 +60,7 @@ class Worker:
         # for resubmit
         return submitit.helpers.DelayedSubmission(self, *args, **kwargs)  # submits to requeuing    
 
-    def __call__(self, func, **kwargs):
+    def __call__(self, func, kwargs):
         func(**kwargs)
 
 
@@ -90,7 +90,7 @@ def slurm_wrapper(args, save_dir, func, func_kwargs, resubmit=True):
         with executor.batch():
             for _ in range(args.sl_node):
                 if resubmit:
-                    job = executor.submit(Worker(), {'func': func, 'kwargs': func_kwargs})
+                    job = executor.submit(Worker(), func=func, kwargs=func_kwargs)
                 else:
                     job = executor.submit(func, **func_kwargs)
 
@@ -107,12 +107,12 @@ def add_slurm_args(arg_parser):
         help="If set, debugging messages will be printed",
     )
     arg_parser.add_argument("--sl_time",default=1080, type=int)  # 16 hrs
-    arg_parser.add_argument("--sl_dir", default='/home/yufeiy2/slurm_cache_shot', type=str)  
+    arg_parser.add_argument("--sl_dir", default='/private/home/yufeiy2/slurm_cache_shot', type=str)  
     arg_parser.add_argument("--sl_work",default=10, type=int)
     arg_parser.add_argument("--sl_node",default=1, type=int)  # 16 hrs
     arg_parser.add_argument("--sl_ngpu",default=1, type=int)
     arg_parser.add_argument("--sl_ntask_pnode",default=1, type=int)
-    arg_parser.add_argument("--sl_part",default='abhinavlong,shubhamlong,all', type=str)
+    arg_parser.add_argument("--sl_part",default='devlab,learnlab', type=str)
     return arg_parser
 
 

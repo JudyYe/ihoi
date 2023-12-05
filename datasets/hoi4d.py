@@ -43,7 +43,7 @@ def pad_box(bbox, pad=0.2):
 class HOI4D(BaseData):
     def __init__(self, cfg, dataset: str, split='train', is_train=True,
                  data_dir='../data/', cache=None):
-        data_dir = '/home/yufeiy2/scratch/data/ihoi/HOI4D'
+        data_dir = '/private/home/yufeiy2/scratch/data/ihoi/HOI4D'
         super().__init__(cfg, 'hoi4d', split, is_train, data_dir)
         # self.num_points = cfg.DB.NUM_POINTS
         self.cache = cache if cache is not None else self.cfg.DB.CACHE
@@ -61,7 +61,7 @@ class HOI4D(BaseData):
         if split == 'val':
             self.split = 'test'
         
-        self.local_dir = '/home/yufeiy2/scratch/data/HOI4D/'
+        self.local_dir = '/private/home/yufeiy2/scratch/data/HOI4D/'
         self.set_dir = osp.join(self.local_dir, f'Sets/all_contact_{self.split}_hand.csv')
         self.cache_file = osp.join(osp.dirname(self.data_dir), 'cache', '%s_%s.pkl' % (dataset, self.split))
         self.cache_mesh = osp.join(osp.dirname(self.data_dir), 'cache', '%s_%s_mesh.pkl' % (dataset, self.split))
@@ -148,7 +148,7 @@ class HOI4D(BaseData):
             self.anno['hA'].append(hA[0])
             
         os.makedirs(osp.dirname(self.cache_file), exist_ok=True)
-        print('save cache')
+        print('save cache', self.cache_file)
         pickle.dump(self.anno, open(self.cache_file, 'wb'))
 
         self.preload_mesh()
@@ -165,7 +165,8 @@ class HOI4D(BaseData):
                 if key not in self.obj2mesh:
                     fname = self.shape_dir.format(cls_id)
                     self.obj2mesh[key] = mesh_utils.load_mesh(fname, scale_verts=1)
-            print('save cache')
+            print('save cache', self.cache_mesh)
+            os.makedirs(osp.dirname(self.cache_mesh), exist_ok=True)
             pickle.dump(self.obj2mesh, open(self.cache_mesh, 'wb'))
 
     def get_bbox(self, idx):

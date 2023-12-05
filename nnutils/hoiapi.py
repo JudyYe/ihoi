@@ -86,6 +86,37 @@ class Predictor:
         out['cHand'] = cHand
         return out
 
+    def get_hSdf_func(self, batch):
+        model = self.model
+        cfg = self.model.cfg
+        hand_wrapper = self.hand_wrapper
+
+        batch = model_utils.to_cuda(batch, self.device)
+
+        hTx = geom_utils.matrix_to_se3(
+            get_nTh(hand_wrapper, batch['hA'].cuda(), cfg.DB.RADIUS, inverse=True))
+
+        device = self.device
+        image_feat = model.enc(batch['image'], mask=batch['obj_mask'])  # (N, D, H, W)
+
+        cTx = geom_utils.compose_se3(batch['cTh'], hTx)
+
+        hTjs = hand_wrapper.pose_to_transform(batch['hA'], False)  # (N, J, 4, 4)
+        N, num_j, _, _ = hTjs.size()
+        jsTh = geom_utils.inverse_rt(mat=hTjs, return_mat=True)
+        hTx_exp = geom_utils.se3_to_matrix(hTx
+                ).unsqueeze(1).repeat(1, num_j, 1, 1)
+        jsTx = jsTh @ hTx_exp
+
+        out = {'z': image_feat, 'jsTx': jsTx}
+
+        camera = PerspectiveCameras(batch['cam_f'], batch['cam_p'], device=device)
+        cTx = geom_utils.compose_se3(batch['cTh'], hTx)
+        # normal space, joint space jsTn, image space 
+        sdf = functools.partial(model.dec, z=out['z'], hA=batch['hA'], 
+            jsTx=out['jsTx'].detach(), cTx=cTx.detach(), cam=camera)
+        return sdf
+
 
 def vis_hand_object(output, data, image, save_dir):
     hHand = output['hHand']

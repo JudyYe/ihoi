@@ -12,7 +12,7 @@ pyyaml
 tqdm
 jinja2
 smplx
-sklearn
+scikit-learn
 chumpy
 jupyter_bbox_widget
 pytorch-lightning==1.2

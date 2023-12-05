@@ -1,4 +1,15 @@
+python -m scripts.run_vhoi  --T_num 10
+
+
 # FT on HOI4D
+CUDA_VISIBLE_DEVICES=5 python -m models.ihoi \
+    --config experiments/hoi4d.yaml  \
+    --ckpt /home/yufeiy2/scratch/pretrain/ihoi/release_model/mow/checkpoints/last.ckpt \
+    EXP light_mow_slurm 
+    --slurm
+
+
+
 CUDA_VISIBLE_DEVICES=5 python -m models.ihoi \
     --config experiments/hoi4d.yaml  \
     --ckpt /home/yufeiy2/scratch/pretrain/ihoi/release_model/mow/checkpoints/last.ckpt \

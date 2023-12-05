@@ -1,3 +1,5 @@
+import os
+import pickle
 from tqdm import tqdm
 from glob import glob
 from torchvision.transforms import ToTensor
@@ -9,6 +11,7 @@ import os.path as osp
 from omegaconf.omegaconf import OmegaConf
 import logging 
 logging.getLogger().setLevel(logging.ERROR)
+from nnutils.hand_utils import get_nTh
 
 # import sys
 # sys.path.append('externals/frankmocap/')
@@ -19,7 +22,7 @@ from config.defaults import get_cfg_defaults
 # from nnutils.handmocap import get_handmocap_predictor, process_mocap_predictions, get_handmocap_detector
 from nnutils import model_utils
 # from nnutils import image_utils
-from jutils import mesh_utils, image_utils, geom_utils
+from jutils import mesh_utils, image_utils, geom_utils, hand_utils
 
 
 import torch
@@ -81,6 +84,14 @@ def get_fp_from_k(k_ndc):
     return f, p
 
 
+def save_inp_out(data, out, fname):
+    data = model_utils.to_cuda(data, 'cpu')
+    out = model_utils.to_cuda(out, 'cpu')
+    os.makedirs(osp.dirname(fname), exist_ok=True)
+    with open(fname, 'wb') as fp:
+        pickle.dump({'data': data, 'out': out}, fp)
+    return 
+
 def render_video(data_list, video_dir, hoi_predictor, device, H):
     name_list = ['input', 'render_0', 'render_1', 'jHoi', 'jObj', 'vHoi', 'vObj', 'vObj_t', 'vHoi_fix']
     image_list = [[] for _ in name_list]
@@ -89,8 +100,11 @@ def render_video(data_list, video_dir, hoi_predictor, device, H):
     for t, data in enumerate(tqdm(data_list)):
         data = model_utils.to_cuda(data, device)
         out = hoi_predictor.forward_to_mesh(data)
+
+        save_inp_out(data, out, osp.join(video_dir, f'data/{t:04d}.pkl'))
         jHand = out['hHand']
         jObj = out['hObj']
+        jObj.textures = mesh_utils.pad_texture(jObj, 'yellow')
         cam_f = data['cam_f']
         cam_p = data['cam_p']
         cTh = data['cTh']
@@ -209,27 +223,43 @@ def render_az(jHand, jObj, cTh, az, H, W, f=2):
 
 
 def main():
-    model_dir = '/home/yufeiy2/scratch/result/ihoi/light_mow/hoi4d'
+    model_dir = '/private/home/yufeiy2/scratch/result/ihoi/light_mow/hoi4d'
 
     if args.data == 'hoi4d':
         cat_list = "Mug,Bottle,Kettle,Bowl,Knife,ToyCar".split(',')
         ind_list = [1,2]
         index_list = [f"{cat}_{ind}" for ind in ind_list for cat in cat_list ]
-        index_list = ['Kettle_1']
-        data_dir = '/home/yufeiy2/scratch/result/HOI4D/'
+        # index_list = ['Bowl_1', 'Kettle_1']
+        data_dir = '/private/home/yufeiy2/scratch/result/HOI4D/'
 
     elif args.data == '3rd':
         index_list = 'kettle6,knife1,bowl2,mug1,bottle2,bowl1,knife2,knife3,mug3,mug2,knife6,bottle6,kettle4'.split(',')
-        data_dir = '/home/yufeiy2/scratch/result/3rd_nocrop'
+        data_dir = '/private/home/yufeiy2/scratch/result/3rd_nocrop'
     elif args.data == '1st':
         index_list = 'bottle_1,bottle_2,mug_3,mug_1,kettle_4,kettle_2,kettle_5,knife_3,bowl_2,bowl_4,bowl_1'.split(',')
-        data_dir = '/home/yufeiy2/scratch/result/1st_nocrop'
+        data_dir = '/private/home/yufeiy2/scratch/result/1st_nocrop'
+    elif args.data == 'ho3d':
+        data_dir = '/private/home/yufeiy2/scratch/result/HO3D_nocrop/'
+        index_list = '003_cracker_box,006_mustard_bottle,011_banana,021_bleach_cleanser,035_power_drill,004_sugar_box,010_potted_meat_can,019_pitcher_base,025_mug,037_scissors'.split(',')
+        index_list = [f'{e}_0' for e in index_list]
+        model_dir = '/private/home/yufeiy2/scratch/pretrain/ihoi/release_model/ho3d/'
+
+    elif args.data == 'mow':
+        cat_list = "Mug,Bottle,Kettle,Bowl,Knife,ToyCar".split(',')
+        ind_list = [1,2]
+        index_list = [f"{cat}_{ind}" for ind in ind_list for cat in cat_list ]
+        # index_list = ['Bowl_1', 'Kettle_1']
+        data_dir = '/private/home/yufeiy2/scratch/result/HOI4D/'
+
+        model_dir = '/private/home/yufeiy2/scratch/pretrain/ihoi/release_model/mow/'
 
     hoi_predictor = get_hoi_predictor(model_dir)
+    new_hand_wrapper = hand_utils.ManopthWrapper().to(device)
     for vid in tqdm(index_list):
         mesh_dir = osp.join(model_dir, vid, 'meshes')
         render_dir = osp.join(model_dir, vid, 'vis_clip')
         video_dir = osp.join(model_dir, vid, 'vis_video')
+        nsdf_dir = osp.join(model_dir, vid, 'nSdf_data')
 
         data_list = get_data(vid, data_dir)
         T = len(data_list) - 1
@@ -243,19 +273,53 @@ def main():
 
         render_step = T_list
         render_video(data_list, video_dir, hoi_predictor, device, 512)
+        
         # for t, data in enumerate(data_list):
         #     data = model_utils.to_cuda(data, device)
+            
+        #     # save_nSdf(data, hoi_predictor, osp.join(nsdf_dir, f'{t:03d}'), new_hand_wrapper)
         #     out = hoi_predictor.forward_to_mesh(data)
-        #     mesh_utils.dump_meshes([osp.join(mesh_dir, f'{t:03d}_hObj')], out['hObj'], )
-        #     mesh_utils.dump_meshes([osp.join(mesh_dir, f'{t:03d}_hHand')], out['hHand'], )
-        #     mesh_utils.dump_meshes([osp.join(mesh_dir, f'{t:03d}_cObj')], out['cObj'], )
-        #     mesh_utils.dump_meshes([osp.join(mesh_dir, f'{t:03d}_cHand')], out['cHand'], )
+        #     # mesh_utils.dump_meshes([osp.join(mesh_dir, f'{t:03d}_hObj')], out['hObj'], )
+        #     # mesh_utils.dump_meshes([osp.join(mesh_dir, f'{t:03d}_hHand')], out['hHand'], )
+        #     # mesh_utils.dump_meshes([osp.join(mesh_dir, f'{t:03d}_cObj')], out['cObj'], )
+        #     # mesh_utils.dump_meshes([osp.join(mesh_dir, f'{t:03d}_cHand')], out['cHand'], )
 
-            # if t in render_step:
-            #     save_render(render_dir, t, data, out,)
+        #     if t in render_step:
+        #         print(render_dir)
+        #         save_render(render_dir, t, data, out,)
 
 
     return 
+
+@torch.no_grad()
+def save_nSdf(data, hoi_predictor, save_name, hand_wrapper):
+
+    os.makedirs(osp.dirname(save_name), exist_ok=True)
+
+    out = hoi_predictor.forward_to_mesh(data)
+    save_inp_out(data, out, save_name + '_mesh.pkl')
+
+    reso = 64
+    bs = len(data['hA'])
+    nSdf_func = hoi_predictor.get_hSdf_func(data)
+    nXyz = mesh_utils.create_sdf_grid(bs, reso, 1.5, device=device)  # (bs, H, H, H, 3)
+    nXyz = nXyz.reshape(bs, -1, 3)  # (bs, H*H*H, 3)
+    hTn = hand_utils.get_nTh(hA=data['hA'], hand_wrapper=hand_wrapper, inverse=True)
+    
+    nSdf = nSdf_func(nXyz).squeeze(-1)  # (bs, HHH, )
+    nSdf = nSdf.reshape(bs, reso, reso, reso)
+    # nSdf_mesh = mesh_utils.batch_grid_to_meshes(nSdf, bs, half_size=1.5, )
+    # nHand, _ = hand_wrapper(nTh, data['hA'])
+    # nSdf_mesh.textures = mesh_utils.pad_texture(nSdf_mesh, 'pink')
+    # nHand.textures = mesh_utils.pad_texture(nHand, 'blue')
+    # image_list = mesh_utils.render_geom_rot_v2(mesh_utils.join_scene([nSdf_mesh, nHand]))
+    # image_utils.save_gif(image_list, save_name)
+    cTh = geom_utils.se3_to_matrix(data['cTh'])
+    batch = model_utils.to_cuda(data, 'cpu')
+    with open(save_name + '_grid.pkl', 'wb') as fp:
+        pickle.dump({'nSdf': nSdf.cpu().numpy()[0], 'hA': data['hA'].cpu().numpy()[0], 'cTh': cTh.cpu().numpy()[0], 'data': batch}, fp)
+    return nSdf
+
 
 import argparse
 def parse_args():
