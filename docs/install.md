@@ -11,7 +11,7 @@
   ```
 
 
-- [~3min] Install other third-party libraries including: [FrankMocap](https://github.com/facebookresearch/frankmocap/) with [my minor modification](https://github.com/judy/frankmocap/), [MANO](https://github.com/hassony2/manopth), [Detectron2](https://github.com/facebookresearch/detectron2) and   download our pretrained models. 
+- [~3min] Install other third-party libraries including: [FrankMocap](https://github.com/facebookresearch/frankmocap/) with [my minor modification](https://github.com/judyye/frankmocap/), [MANO](https://github.com/hassony2/manopth), [Detectron2](https://github.com/facebookresearch/detectron2) and   download our pretrained models. 
   - Run the following script
   ```
   sh scripts/one_click.sh
